@@ -1,0 +1,29 @@
+format = "$all"
+
+[character]
+success_symbol = "[\\$](bold green)"
+error_symbol = "[\\$](bold red)"
+
+[jobs]
+symbol = '#'
+format = "[$symbol$number]($style)"
+
+[git_status]
+ahead = "⇡${count}"
+diverged = "⇕⇡${ahead_count}⇣${behind_count}"
+behind = "⇣${count}"
+
+[python]
+symbol = "\u0000"
+python_binary = "python3"
+version_format = "py${major}${minor}"
+
+[conda]
+symbol = "\u0000"
+ignore_base = false
+
+[nodejs]
+symbol = "nodejs "
+
+[container]
+disabled = true

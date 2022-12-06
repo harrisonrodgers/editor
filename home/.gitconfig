@@ -1,0 +1,54 @@
+[user]
+    name = Harrison Rodgers
+
+[commit]
+    gpgSign = true
+[tag]
+    gpgSign = true
+[http]
+    sslVerify = true
+
+[alias]
+    s = status
+    co = checkout
+
+[pull]
+    rebase = True
+[push]
+    default = simple
+[rebase]
+    autoStash = true
+
+[log]
+    decorate = true
+    color = true
+[format]
+    pretty = custom
+[pretty]
+    custom = format:%C(auto)%H%d%Creset%nAuthor: %Cgreen%ad%Creset %aN <%aE> %Cgreen%ar%Creset%n%C(always,dim)Commit: %cd %cN <%cE> %cr%Creset %G? %GK %GS%n%C(always,bold)%s%Creset%n
+
+[diff]
+    tool = vimdiff3
+[difftool "vimdiff3"]
+    path = nvim
+[difftool]
+    # Do not ask yes/no before launching
+    prompt = false
+    # Be able to abort by exiting vim with a non-zero exit code (`:cq` or `:cquit`).
+    trustExitCode = true
+
+[merge]
+    # Do not as yes/no before launching
+    tool = vimdiff3
+[mergetool "vimdiff3"]
+    path = nvim
+[mergetool]
+    # Do not ask yes/no before launching
+    prompt = false
+    # Be able to abort by exiting vim with a non-zero exit code (`:cq` or `:cquit`).
+    trustExitCode = true
+
+# Cache username + password for 5 years to avoid having to type username + password
+[credential]
+    helper = cache --timeout=157680000
+

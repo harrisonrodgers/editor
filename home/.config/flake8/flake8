@@ -1,0 +1,6 @@
+[flake8]
+extend-ignore =
+    # ignore for now until updated later
+    RST304
+    # ignore by default so not used on cli runs (such as git hooks)
+    RST,D
