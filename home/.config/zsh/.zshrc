@@ -3,7 +3,6 @@
 # TODO: use stuff from https://git.forestier.app/HorlogeSkynet/dotfiles/src/commit/dd73214f6cc35cbda717685cb17932568284ce1f/.zshrc
 
 source ~/.nix-profile/etc/profile.d/nix.sh
-source ~/.config/zsh/zplug/init.zsh
 
 eval "$(direnv hook zsh)"
 
@@ -43,7 +42,7 @@ alias egrep='egrep --color=auto'
 
 # Muscle Memory
 alias vim='nvim'
-alias ls='exa --git --binary'
+alias ls='eza --git --binary'
 alias cat='bat'
 
 ## Prompt
@@ -55,10 +54,7 @@ eval "$(starship init zsh)"
 export LS_COLORS="$LS_COLORS:ow=1;7;34:st=30;44:su=30;41"
 
 ## Syntax
-zplug "zsh-users/zsh-syntax-highlighting", defer:2
-
-## Man colors
-zplug "jan-warchol/selenized", from:github, use:"other-apps/selenized-man/selenized-mono-man.plugin.zsh"
+source /nix/store/*-zsh-syntax-highlighting-*/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 
 # Less Colors (from "jan-warchol/selenized")
 LESS_TERMCAP_mb=$(printf "\e[1;37m")
@@ -76,7 +72,100 @@ autoload -Uz compinit; compinit
 #zstyle ':completion:*' menu select                 # autocompletion with an arrow-key driven interface
 setopt COMPLETE_ALIASES                            # autocompletion of command line switches for aliases
 zstyle ':completion::complete:*' gain-privileges 1 # autocompletion of privileged environments in privileged commands
-#zplug "zsh-users/zsh-history-substring-search", defer:3
+
+## Keys
+# Ensure delete key works as expected
+bindkey "\e[3~" delete-char
+# Disable XON/XOFF flow control which takes over ctrl+q and ctrl+s (i want normal ctrl+s for forward history search)
+#stty -ixon
+
+## VI Mode
+#bindkey -v
+# Ensure backspace works in Vi mode
+#bindkey -v '^?' backward-delete-char
+# Retain CTRL+R and CTRL+S in Vi mode
+#bindkey -v "^R" history-incremental-search-backward
+#bindkey -v "^S" history-incremental-search-forward
+
+# Conda: Activate
+# alias ca='if ! test -f tasks.py ; then echo "Not a supported repo, no tasks.py found." && return 1 ; fi ; micromamba deactivate && basename=`basename $PWD` && micromamba activate $basename'
+cr() {
+    if ! test -f tasks.py
+    then 
+        echo "Not a supported repo, no tasks.py found."
+	return 1
+    else
+        micromamba deactivate && basename=`basename $PWD` && micromamba activate $basename
+    fi
+}
+
+# Conda: Recreate
+cr() {
+    if ! test -f tasks.py
+    then 
+        echo "Not a supported repo, no tasks.py found."
+	return 1
+    else
+        micromamba deactivate
+	basename=`basename $PWD`
+	# micromamba env remove -n $basename # use rm instead to avoid complaint if non-existant
+	rm -rf ~/.conda/envs/$basename 2>/dev/null
+	micromamba create -n $basename python=3.12 invoke jinja2 pyyaml --yes --quiet
+	micromamba activate $basename
+	inv bootstrap develop hooks
+	# micromamba clean --packages --tarballs --force-pkgs-dirs --yes --quiet
+    fi
+}
+cr38() {
+    if ! test -f tasks.py
+    then 
+        echo "Not a supported repo, no tasks.py found."
+	return 1
+    else
+        micromamba deactivate
+	basename=`basename $PWD`
+	# micromamba env remove -n $basename # use rm instead to avoid complaint if non-existant
+	rm -rf ~/.conda/envs/$basename 2>/dev/null
+	micromamba create -n $basename python=3.8.10 invoke jinja2 pyyaml --yes --quiet
+	micromamba activate $basename
+	inv bootstrap develop hooks
+	# micromamba clean --packages --tarballs --force-pkgs-dirs --yes --quiet
+    fi
+}
+
+# Conda: Recreate with extra development
+crdev() {
+    if ! test -f tasks.py
+    then 
+        echo "Not a supported repo, no tasks.py found."
+	return 1
+    else
+        micromamba deactivate
+	basename=`basename $PWD`
+	# micromamba env remove -n $basename # use rm instead to avoid complaint if non-existant
+	rm -rf ~/.conda/envs/$basename 2>/dev/null
+	micromamba create -n $basename python=3.12 invoke ipython pylint flake8-bugbear flake8-builtins flake8-rst flake8-rst-docstrings flake8-docstrings jinja2 pyyaml --yes --quiet
+	micromamba activate $basename
+	inv bootstrap develop hooks
+	# micromamba clean --packages --tarballs --force-pkgs-dirs --yes --quiet
+    fi
+}
+crdev38() {
+    if ! test -f tasks.py
+    then 
+        echo "Not a supported repo, no tasks.py found."
+	return 1
+    else
+        micromamba deactivate
+	basename=`basename $PWD`
+	# micromamba env remove -n $basename # use rm instead to avoid complaint if non-existant
+	rm -rf ~/.conda/envs/$basename 2>/dev/null
+	micromamba create -n $basename python=3.8.10 invoke ipython pylint flake8-bugbear flake8-builtins flake8-rst flake8-rst-docstrings flake8-docstrings jinja2 pyyaml --yes --quiet
+	micromamba activate $basename
+	inv bootstrap develop hooks
+	# micromamba clean --packages --tarballs --force-pkgs-dirs --yes --quiet
+    fi
+}
 
 # FZF
 source ~/.config/zsh/fzf/completion.zsh
@@ -94,43 +183,22 @@ export FZF_CTRL_R_OPTS="--preview 'echo {}' --preview-window down:hidden:wrap --
 export FZF_CTRL_T_OPTS="--preview '((test -f {} && bat --color always {}) || tree -C {}) 2> /dev/null | head -200'"
 
 ## FZF-Tab Completion (make sure it is last plugin so it's key-bindings win)
-zplug "Aloxaf/fzf-tab", from:github, use:"fzf-tab.plugin.zsh"
+source /nix/store/*-zsh-fzf-tab-*/share/fzf-tab/fzf-tab.plugin.zsh
+
 zstyle ':completion:*:descriptions' format '[%d]'
 # do not sort git checkout or commit
 zstyle ":completion:*:git-checkout:*" sort false
 zstyle ":completion:*:git-commit:*" sort false
 zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
 zstyle ':fzf-tab:*' default-color $'\033[92m'
-# give a preview of directory by exa when completing cd
-zstyle ':fzf-tab:complete:cd:*' fzf-preview 'exa -1 --color=always $realpath'
+# give a preview of directory by eza when completing cd
+zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza -1 --color=always $realpath'
 
-## Keys
-# Ensure delete key works as expected
-bindkey "\e[3~" delete-char
-# Disable XON/XOFF flow control which takes over ctrl+q and ctrl+s (i want normal ctrl+s for forward history search)
-#stty -ixon
-
-## VI Mode
-#bindkey -v
-# Ensure backspace works in Vi mode
-#bindkey -v '^?' backward-delete-char
-# Retain CTRL+R and CTRL+S in Vi mode
-#bindkey -v "^R" history-incremental-search-backward
-#bindkey -v "^S" history-incremental-search-forward
-
-alias ca='if ! test -f tasks.py ; then echo "Not a supported repo, no tasks.py found." && return 1 ; fi ; conda deactivate && basename=`basename $PWD` && conda activate $basename'
-
-alias cr='if ! test -f tasks.py ; then echo "Not a supported repo, no tasks.py found." && return 1 ; fi ; conda deactivate && basename=`basename $PWD` && conda env remove -n $basename && rm -rf ~/.conda/envs/$basename 2>/dev/null ; conda create -n $basename python=3.8.10 invoke ipython pylint flake8-bugbear flake8-builtins flake8-rst flake8-rst-docstrings flake8-docstrings jinja2 pyyaml --yes --quiet && conda activate $basename && inv bootstrap develop hooks' # && conda clean --packages --tarballs --force-pkgs-dirs --yes --quiet'
-alias cr36='if ! test -f tasks.py ; then echo "Not a supported repo, no tasks.py found." && return 1 ; fi ; conda deactivate && basename=`basename $PWD` && conda env remove -n $basename && rm -rf ~/.conda/envs/$basename 2>/dev/null ; conda create -n $basename python=3.6.8 invoke ipython pylint flake8-bugbear flake8-builtins flake8-rst flake8-rst-docstrings flake8-docstrings jinja2 pyyaml --yes --quiet && conda activate $basename && inv bootstrap develop hooks' # && conda clean --packages --tarballs --force-pkgs-dirs --yes --quiet'
-
-alias crclean='if ! test -f tasks.py ; then echo "Not a supported repo, no tasks.py found." && return 1 ; fi ; conda deactivate && basename=`basename $PWD` && conda env remove -n $basename && rm -rf ~/.conda/envs/$basename 2>/dev/null ; conda create -n $basename python=3.8.10 invoke jinja2 pyyaml --yes --quiet && conda activate $basename && inv bootstrap develop hooks ' # && conda clean --packages --tarballs --force-pkgs-dirs --yes --quiet'
-alias crclean36='if ! test -f tasks.py ; then echo "Not a supported repo, no tasks.py found." && return 1 ; fi ; conda deactivate && basename=`basename $PWD` && conda env remove -n $basename && rm -rf ~/.conda/envs/$basename 2>/dev/null ; conda create -n $basename python=3.6.8 invoke jinja2 pyyaml --yes --quiet && conda activate $basename && inv bootstrap develop hooks ' # && conda clean --packages --tarballs --force-pkgs-dirs --yes --quiet'
-
-# >>> conda initialize >>>
-# !! Contents within this block are managed by 'conda init' !!
-__conda_setup="$('/opt/conda/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
+# >>> mamba initialize >>>
+# !! Contents within this block are managed by 'mamba init' !!
+__mamba_setup="$('/opt/conda/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
 if [ $? -eq 0 ]; then
-    eval "$__conda_setup"
+    eval "$__mamba_setup"
 else
     if [ -f "/opt/conda/etc/profile.d/conda.sh" ]; then
         . "/opt/conda/etc/profile.d/conda.sh"
@@ -138,12 +206,5 @@ else
         export PATH="/opt/conda/bin:$PATH"
     fi
 fi
-unset __conda_setup
-# <<< conda initialize <<
-
-## Zplug
-#zplug 'zplug/zplug', hook-build:'zplug --self-manage'
-if ! zplug check; then
-    zplug install
-fi
-zplug load
+unset __mamba_setup
+# <<< mamba initialize <<

@@ -1,43 +1,42 @@
-FROM ubuntu:18.04
+FROM ubuntu:22.04
 
-## CONDA ###############################################################################################################
-ENV CONDA_ROOT="/opt/conda"
+## MICROMAMBA ##########################################################################################################
+ENV MAMBA_ROOT_PREFIX="/opt/conda"
 
-# Set environment variables that conda init would normally set
-ENV PATH="${CONDA_ROOT}/bin:${CONDA_ROOT}/condabin:${PATH}" \
-    CONDA_DEFAULT_ENV="base" \
-    CONDA_EXE="${CONDA_ROOT}/bin/conda" \
-    CONDA_PREFIX="${CONDA_ROOT}" \
-    CONDA_PROMPT_MODIFIER="(base)" \
-    CONDA_PYTHON_EXE="${CONDA_ROOT}/bin/python" \
-    CONDA_SHLVL="1" \
-    _CE_CONDA="" \
-    _CE_M=""
+# Set environment variables that micromamba init would normally set
+ENV PATH="${MAMBA_ROOT_PREFIX}/condabin:${PATH}" \
+    MAMBA_EXE="/bin/micromamba" \
+    CONDA_SHLVL="0"
 
-# Install conda
+# Install
 RUN apt-get update \
-    && apt-get -y install curl tzdata \
-    && apt-mark manual curl tzdata \
+    && apt-get -y install curl tzdata bzip2 \
     && dpkg-reconfigure -f noninteractive tzdata \
-    # Fetch Miniconda install script
-    && curl -SsLo /tmp/miniconda.sh https://repo.continuum.io/miniconda/Miniconda3-py38_4.9.2-Linux-x86_64.sh \
     # Install Miniconda
-    && bash /tmp/miniconda.sh -bfp $CONDA_ROOT \
-    # Cleanup Miniconda install script
-    && rm -rf /tmp/miniconda.sh \
-    && conda config --show \
-    # Clean conda to reduce image bloat
-    && conda clean --all --yes \
+    && curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/1.5.8 | tar -xj -C /tmp bin/micromamba \
+    && mv /tmp/bin/micromamba ${MAMBA_EXE} \
+    && rmdir /tmp/bin \
+    # Run init (commented out as I have this included in my .zshrc already)
+    # micromamba shell init --shell bash --root-prefix=${MAMBA_ROOT_PREFIX} \
+    # Information
+    && micromamba info \
     # Give other users ability to use conda
-    && mkdir /.conda \
-    && chmod 777 /.conda \
+    && mkdir ${MAMBA_ROOT_PREFIX} \
+    && chmod -R a+rwX ${MAMBA_ROOT_PREFIX} --changes \
     # Remove packages to reduce image bloat
-    && apt-get -y remove curl \
-    && apt-get -y autoremove \
-    && apt-get autoclean \
-    && rm -rf /var/lib/apt/lists/* /var/log/dpkg.log \
+    && apt-get -y remove curl bzip2 \
+    # && apt-get -y autoremove \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /var/log/dpkg.log
     # System level conda configuration
-    && echo "changeps1: False" > ${CONDA_ROOT}/.condarc
+    # && echo "changeps1: False" > ${MAMBA_ROOT_PREFIX}/.condarc
+
+# Activate the base env by default
+ENV PATH="${MAMBA_ROOT_PREFIX}/bin:${PATH}" \
+    CONDA_DEFAULT_ENV="base" \
+    CONDA_PREFIX="${MAMBA_ROOT_PREFIX}" \
+    CONDA_PROMPT_MODIFIER="(base)" \
+    CONDA_SHLVL="1"
 
 ## TERM (matters to apps like ZSH/TMUX/...) ############################################################################
 ENV TERM=xterm-256color
@@ -49,21 +48,13 @@ ENV LC_ALL=C.UTF-8 \
 ## UNMINIMIZE UBUNTU ###################################################################################################
 RUN yes | unminimize
 
-## DOCKER IN DOCKER ####################################################################################################
-RUN apt-get update \
-    && apt-get -y install docker.io \
-    && mkdir /.docker \
-    && chmod 777 /.docker \
-    && apt-get -y autoremove \
-    && apt-get autoclean \
-    && rm -rf /var/lib/apt/lists/* /var/log/dpkg.log
 
-## INSTALL DEPS FOR SUBSEQUENT STEPS ###################################################################################
+## DOCKER IN DOCKER ####################################################################################################
+
+## INSTALL #############################################################################################################
 RUN apt-get update \
-    && apt-get -y install sudo build-essential openssh-client man-db git-man git manpages manpages-dev manpages-posix manpages-posix-dev plantuml tzdata curl ncurses-term gcc libncurses5-dev \
-    && apt-get -y autoremove \
-    && apt-get -y install plantuml \
-    && apt-get autoclean \
+    && apt-get -y install sudo build-essential openssh-client man-db git-man manpages manpages-dev manpages-posix manpages-posix-dev plantuml tzdata curl ncurses-term \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /var/log/dpkg.log
 
 ## USER SETUP ##########################################################################################################
@@ -78,7 +69,7 @@ RUN groupadd -g $GID $GROUP \
     # password-less sudo inside the container
     && echo "$USER ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
-## USER ACTIVATE FOR REST OF DOCKERFILE ################################################################################
+## USER ACTIVATE FOR REST OF DOCKERFILE (note: after this point, need to use sudo) #####################################
 USER $UID:$GID
 WORKDIR $HOME
 
@@ -100,16 +91,23 @@ RUN nix-env -iA \
     # nixpkgs.posix_man_pages \
 # shell
     nixpkgs.zsh \
+    nixpkgs.zsh-fzf-tab \
+    nixpkgs.zsh-syntax-highlighting \
 # prompt
     nixpkgs.starship \
+    # nixpkgs.zsh-powerlevel10k # consider, faster, though zsh only
+# container
+    nixpkgs.docker \
 # multiplexer
     nixpkgs.tmux \
-# python
+# python (using micromamba instead)
     # nixpkgs.python310Full \
-# editor
+# editor (using appimage instead)
     # nixpkgs.neovim  \
+# backup 
+    nixpkgs.nano \ 
 # misc
-    # nixpkgs.git \
+    nixpkgs.git \
     nixpkgs.direnv \
     nixpkgs.fzf \
     nixpkgs.ripgrep \
@@ -117,7 +115,7 @@ RUN nix-env -iA \
     nixpkgs.fd \
     nixpkgs.tree \
     nixpkgs.bat \
-    nixpkgs.exa \
+    nixpkgs.eza \
     nixpkgs.lnav \
     nixpkgs.gawk \
     nixpkgs.less \
@@ -125,8 +123,11 @@ RUN nix-env -iA \
     nixpkgs.kubectl \
     nixpkgs.renameutils \
 # to complie nvim tree-sitter parsers
-    # nixpkgs.gcc \
+    nixpkgs.gcc \
 # neovim, lsp, formatters, linters
+    # note: most python formatter/linter are managed in the app's conda env
+    # nixpkgs.ruff \
+    nixpkgs.ruff-lsp \
     nixpkgs.nodePackages.neovim \
     nixpkgs.nodePackages.pyright \
     nixpkgs.nodePackages.yaml-language-server \
@@ -137,8 +138,9 @@ RUN nix-env -iA \
     nixpkgs.stylua \
     nixpkgs.gitlint \
     nixpkgs.luajitPackages.luacheck \
-# kustomize
+# misc dev 
     nixpkgs.kustomize \
+    nixpkgs.plantuml \
 # cleanup
     # && nix-env -u \
     && nix-env --delete-generations old \
@@ -146,12 +148,19 @@ RUN nix-env -iA \
     && nix-store --optimize \
     && nix-store --verify --check-contents
 
+## REMOVE python if it snuck in (as we use micromamba) #################################################################
+RUN sudo apt-get remove -y python3 \
+    && sudo apt-get -y autoremove
+
+## MAN & COMPLETION (UPDATE DBS AFTER ALL THE ABOVE INSTALLS) ##########################################################
+RUN sudo mandb --create
+
 ## CONFIG FILES ########################################################################################################
 COPY --chown=$UID:$GID ["home", "${HOME}/"]
 
 ## NVIM INSTALL ########################################################################################################
 RUN mkdir -p $HOME/.bin \
-    && curl -L -o /tmp/nvim.appimage https://github.com/neovim/neovim/releases/download/v0.8.1/nvim.appimage \
+    && curl -L -o /tmp/nvim.appimage https://github.com/neovim/neovim/releases/download/v0.9.5/nvim.appimage \
     && chmod u+x /tmp/nvim.appimage \
     && /tmp/nvim.appimage --appimage-extract \
     && rm /tmp/nvim.appimage \
@@ -160,37 +169,18 @@ RUN mkdir -p $HOME/.bin \
 
 ## NVIM SETUP ##########################################################################################################
 RUN mkdir -p $HOME/.local/share/nvim/site/autoload \
-    # vim-plug install
-    #&& curl -o $HOME/.local/share/nvim/site/autoload/plug.vim https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim \
-    #&& nvim --headless -u "${HOME}/.config/nvim/plug.vim" -c "PlugInstall" -c "qa" \
-    # paq0nvim install
+    # paq-nvim install
     && echo "Installing paq-nvim:" \
     && git clone --depth=1 https://github.com/savq/paq-nvim.git $HOME/.local/share/nvim/site/pack/paqs/start/paq-nvim \
     && echo "Installing nvim packages using paq-nvim:" \
     && nvim --headless -u NONE -c 'lua require("config/bootstrap").bootstrap_paq()' \
     && echo "" \
-    # treesitter install
+    # treesitter install (sync is slow, but safest way to do it automated)
     && echo "Installing nvim-treesitter language parsers:" \
     && nvim --headless -c "TSInstallSync all" -c "qa"
-# treesitter install sync is slow; it's possible to do it async but dangerous as we have to sleep for long enough time
-#   && nvim --headless -c "execute 'TSInstall all' | sleep 30 | qa"
-
-## REMOVE ##############################################################################################################
-RUN sudo apt-get remove -y python3 python3.6 python3.6-minimal
-
-## MAN & COMPLETION (UPDATE DBS AFTER ALL THE ABOVE INSTALLS) ##########################################################
-RUN sudo mandb --create
 
 ## ZSH #################################################################################################################
-ENV ZDOTDIR=$HOME/.config/zsh \
-    ZPLUG_HOME=/home/harrison.rodgers/.config/zsh/zplug
-RUN git clone https://github.com/zplug/zplug $HOME/.config/zsh/zplug
-
-# Trigger zplug to install everything so we don't have to do it each container launch
-RUN zsh -c "source ~/.config/zsh/.zshrc && exit"
-
-# Build fzf-tab binary module to speed up performance (requires libncurses5-dev)
-RUN zsh -c "source ~/.config/zsh/.zshrc && build-fzf-tab-module && exit"
+ENV ZDOTDIR=$HOME/.config/zsh
 
 ## PYTHON ##############################################################################################################
 ENV PYTHONDONTWRITEBYTECODE=1 \

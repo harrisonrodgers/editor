@@ -1,5 +1,7 @@
+local augroup = vim.api.nvim_create_augroup("LspFormatting", {}) -- Format on save
+
 -- TODO: kind_icons without a plugin: https://github.com/hrsh7th/nvim-cmp/wiki/Menu-Appearance#basic-customisations
---
+
 -- Functions for vim-vsnip
 local has_words_before = function()
 	local line, col = unpack(vim.api.nvim_win_get_cursor(0))
@@ -91,6 +93,18 @@ cmp.setup.cmdline(":", {
 -- FROM: https://github.com/neovim/nvim-lspconfig
 -- Use an on_attach function to only map the following keys after the language server attaches to the current buffer
 local on_attach = function(client, bufnr)
+
+	-- Format on save
+        if client.supports_method("textDocument/formatting") then
+            vim.api.nvim_clear_autocmds({ group = augroup, buffer = bufnr })
+            vim.api.nvim_create_autocmd("BufWritePre", {
+                group = augroup,
+                buffer = bufnr,
+		-- Sync causes less issues, and ruff is ultra fast
+                callback = function() vim.lsp.buf.format({ async = false }) end,
+            })
+        end
+
 	-- Enable completion triggered by <c-x><c-o>
 	--vim.api.nvim_buf_set_option(bufnr, 'omnifunc', 'v:lua.vim.lsp.omnifunc')
 
@@ -104,16 +118,12 @@ local on_attach = function(client, bufnr)
 	vim.keymap.set("n", "<C-k>", vim.lsp.buf.signature_help, bufopts)
 	vim.keymap.set("n", "<space>wa", vim.lsp.buf.add_workspace_folder, bufopts)
 	vim.keymap.set("n", "<space>wr", vim.lsp.buf.remove_workspace_folder, bufopts)
-	vim.keymap.set("n", "<space>wl", function()
-		print(vim.inspect(vim.lsp.buf.list_workspace_folders()))
-	end, bufopts)
+	vim.keymap.set("n", "<space>wl", function() print(vim.inspect(vim.lsp.buf.list_workspace_folders())) end, bufopts)
 	vim.keymap.set("n", "<space>D", vim.lsp.buf.type_definition, bufopts)
 	vim.keymap.set("n", "<space>rn", vim.lsp.buf.rename, bufopts)
 	vim.keymap.set("n", "<space>ca", vim.lsp.buf.code_action, bufopts)
 	vim.keymap.set("n", "gr", vim.lsp.buf.references, bufopts)
-	vim.keymap.set("n", "<space>f", function()
-		vim.lsp.buf.format({ async = true })
-	end, bufopts)
+	--vim.keymap.set("n", "<space>f", function() vim.lsp.buf.format({ async = false }) end, bufopts)
 end
 
 -- Add additional capabilities supported by nvim-cmp
@@ -121,7 +131,6 @@ local capabilities = require("cmp_nvim_lsp").default_capabilities()
 
 local lspconfig = require("lspconfig")
 local servers = {
-	"pyright",
 	"jsonls",
 	"yamlls",
 	"vimls",
@@ -137,3 +146,27 @@ for _, lsp in ipairs(servers) do
 		capabilities = capabilities,
 	})
 end
+
+lspconfig["pyright"].setup({
+	on_attach = on_attach,
+	capabilities = capabilities,
+	-- https://www.andersevenrud.net/neovim.github.io/lsp/configurations/pyright/
+	settings = {
+		pyright = {
+			-- Exclusively use Ruff for import organizing
+			disableOrganizeImports = true,
+		},
+		--python = {
+		--	analysis = {
+		--		-- Exclusively use Ruff for linting
+		--		ignore = { '*' },
+		--	},
+		--},
+    	},
+})
+
+-- lspconfig["ruff"].setup({ -- Native rust version of ruff_lsp, currently in alpha. https://github.com/neovim/nvim-lspconfig/blob/master/doc/server_configurations.md#ruff
+lspconfig["ruff_lsp"].setup({
+	on_attach = on_attach,
+	capabilities = capabilities,
+})

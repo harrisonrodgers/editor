@@ -19,7 +19,6 @@ See `$HOME/.config/nvim/lua/lsp.lua`.
 | area              | selection        | link                                     |
 |-------------------|------------------|------------------------------------------|
 | shell             | `zsh`            | http://zsh.sourceforge.net               |
-| plugin manager    | `zplug`          | https://github.com/zplug/zplug           |
 | tab completion    | `fzf-tab`        | https://github.com/Aloxaf/fzf-tab        |
 | prompt            | `starship`       | https://github.com/starship/starship     |
 | cli fuzzy finder  | `fzf`            | https://github.com/junegunn/fzf          |
@@ -31,7 +30,7 @@ See `$HOME/.config/nvim/lua/lsp.lua`.
 |-------------------|------------------|------------------------------------------|
 | cat               | `bat`            | https://github.com/sharkdp/bat           |
 | grep              | `ripgrep`        | https://github.com/burntsushi/ripgrep    |
-| ls                | `exa`            | https://github.com/ogham/exa             |
+| ls                | `eza`            | https://github.com/eza-community/eza     |
 | find              | `fd`             | https://github.com/sharkdp/fd            |
 
 **misc**

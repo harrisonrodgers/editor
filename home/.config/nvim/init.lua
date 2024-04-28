@@ -13,7 +13,7 @@ vim.g.loaded_perl_provider = 0
 --vim.g.python3_host_prog = '/bin/python3'
 
 require("config/colorscheme")
-require("config/null-ls")
+--require("config/null-ls") -- being replaced with ruff_lsp
 require("config/lsp_cmp_snip")
 require("config/diagnostic")
 require("config/indent-blankline")
