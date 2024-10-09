@@ -104,6 +104,7 @@ RUN nix-env -iA \
     # nixpkgs.python310Full \
 # editor (using appimage instead)
     # nixpkgs.neovim  \
+    nixpkgs.nano \
 # backup 
     nixpkgs.nano \ 
 # misc
@@ -117,6 +118,7 @@ RUN nix-env -iA \
     nixpkgs.bat \
     nixpkgs.eza \
     nixpkgs.lnav \
+    nixpkgs.sta \
     nixpkgs.gawk \
     nixpkgs.less \
     nixpkgs.zoxide \
@@ -129,14 +131,15 @@ RUN nix-env -iA \
     # nixpkgs.ruff \
     nixpkgs.ruff-lsp \
     nixpkgs.nodePackages.neovim \
-    nixpkgs.nodePackages.pyright \
-    nixpkgs.nodePackages.yaml-language-server \
-    nixpkgs.nodePackages.vim-language-server \
+    nixpkgs.pyright \
+    nixpkgs.yaml-language-server \
+    nixpkgs.vim-language-server \
     nixpkgs.nodePackages.bash-language-server \
-    nixpkgs.nodePackages.dockerfile-language-server-nodejs \
-    nixpkgs.nodePackages.vscode-langservers-extracted \
+    nixpkgs.dockerfile-language-server-nodejs \
+    nixpkgs.vscode-langservers-extracted \
     nixpkgs.stylua \
     nixpkgs.gitlint \
+    nixpkgs.yamllint \
     nixpkgs.luajitPackages.luacheck \
 # misc dev 
     nixpkgs.kustomize \
@@ -160,7 +163,7 @@ COPY --chown=$UID:$GID ["home", "${HOME}/"]
 
 ## NVIM INSTALL ########################################################################################################
 RUN mkdir -p $HOME/.bin \
-    && curl -L -o /tmp/nvim.appimage https://github.com/neovim/neovim/releases/download/v0.9.5/nvim.appimage \
+    && curl -L -o /tmp/nvim.appimage https://github.com/neovim/neovim/releases/download/v0.10.2/nvim.appimage \
     && chmod u+x /tmp/nvim.appimage \
     && /tmp/nvim.appimage --appimage-extract \
     && rm /tmp/nvim.appimage \

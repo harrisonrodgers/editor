@@ -45,6 +45,9 @@ alias vim='nvim'
 alias ls='eza --git --binary'
 alias cat='bat'
 
+# Convenience
+alias ,repos='cd /sandbox/$USER/repos/'
+
 ## Prompt
 export STARSHIP_CONFIG=~/.config/starship/starship.toml
 eval "$(starship init zsh)"
@@ -89,7 +92,7 @@ bindkey "\e[3~" delete-char
 
 # Conda: Activate
 # alias ca='if ! test -f tasks.py ; then echo "Not a supported repo, no tasks.py found." && return 1 ; fi ; micromamba deactivate && basename=`basename $PWD` && micromamba activate $basename'
-cr() {
+,cr() {
     if ! test -f tasks.py
     then 
         echo "Not a supported repo, no tasks.py found."
@@ -100,7 +103,7 @@ cr() {
 }
 
 # Conda: Recreate
-cr() {
+,cr() {
     if ! test -f tasks.py
     then 
         echo "Not a supported repo, no tasks.py found."
@@ -116,7 +119,7 @@ cr() {
 	# micromamba clean --packages --tarballs --force-pkgs-dirs --yes --quiet
     fi
 }
-cr38() {
+,cr38() {
     if ! test -f tasks.py
     then 
         echo "Not a supported repo, no tasks.py found."
@@ -134,7 +137,7 @@ cr38() {
 }
 
 # Conda: Recreate with extra development
-crdev() {
+,crdev() {
     if ! test -f tasks.py
     then 
         echo "Not a supported repo, no tasks.py found."
@@ -150,7 +153,7 @@ crdev() {
 	# micromamba clean --packages --tarballs --force-pkgs-dirs --yes --quiet
     fi
 }
-crdev38() {
+,crdev38() {
     if ! test -f tasks.py
     then 
         echo "Not a supported repo, no tasks.py found."
