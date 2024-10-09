@@ -13,7 +13,7 @@ RUN apt-get update \
     && apt-get -y install curl tzdata bzip2 \
     && dpkg-reconfigure -f noninteractive tzdata \
     # Install Miniconda
-    && curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/1.5.8 | tar -xj -C /tmp bin/micromamba \
+    && curl -Ls https://github.com/mamba-org/micromamba-releases/releases/download/2.0.2-0/micromamba-linux-64.tar.bz2 | tar -xj -C /tmp bin/micromamba \
     && mv /tmp/bin/micromamba ${MAMBA_EXE} \
     && rmdir /tmp/bin \
     # Run init (commented out as I have this included in my .zshrc already)
