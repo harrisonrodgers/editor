@@ -1,0 +1,23 @@
+# User-level typos config, read by typos-lsp (see lua/config/lsp.lua). A project's own .typos.toml is merged on top of it.
+# Restart the LSP (:LspRestart) after editing.
+#
+# typos checks code in two steps: it picks out identifiers (e.g. `get_helo_world`), then splits each one
+# into words (`get`, `helo`, `world`) and checks each word. The two sections below hook into those two steps.
+#
+# For both, the value says what to do:
+#   same as the key -> always accepted
+#   a different word -> the suggested correction
+#   "" (blank)      -> never accepted
+
+[default.extend-words]
+# Works on the words after splitting. Accepts the word everywhere (code, comments, prose, and inside any identifier).
+# Rule: same as the key -> always accepted
+# helo = "helo"
+# Rule: a different word -> the suggested correction
+paarmetron = "parametron"
+
+[default.extend-identifiers]
+# Works on the whole identifier before splitting. Accepts that exact name but still flags the pieces elsewhere, so use
+# it for odd names you can't rename (library APIs, protocol fields, generated code) instead of whitelisting their words.
+# e.g. accept the name `get_helo_world` but still flag a bare `helo`:
+# get_helo_world = "get_helo_world"

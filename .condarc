@@ -5,3 +5,4 @@ show_channel_urls: true
 anaconda_upload: false
 auto_update_conda: false
 report_errors: false
+changeps1: false

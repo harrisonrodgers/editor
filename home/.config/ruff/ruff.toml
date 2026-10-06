@@ -1,0 +1,9 @@
+# User-level ruff config (replaces the old null-ls flake8/black/isort setup)
+line-length = 120
+
+[lint]
+# E/F/W = pycodestyle + pyflakes (flake8 defaults), I = isort, N/D skipped
+select = ["E", "F", "W", "I"]
+# Mirrors the old flake8 flags: --extend-ignore=A,B,W503,E501,E203,E741
+# (A and B are not selected; W503 doesn't exist in ruff)
+ignore = ["E501", "E203", "E741"]

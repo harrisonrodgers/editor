@@ -1,45 +1,11 @@
 FROM ubuntu:22.04
 
-## MICROMAMBA ##########################################################################################################
-ENV MAMBA_ROOT_PREFIX="/opt/conda"
-
-# Set environment variables that micromamba init would normally set
-ENV PATH="${MAMBA_ROOT_PREFIX}/condabin:${PATH}" \
-    MAMBA_EXE="/bin/micromamba" \
-    CONDA_SHLVL="0"
-
-# Install
-RUN apt-get update \
-    && apt-get -y install curl tzdata bzip2 \
-    && dpkg-reconfigure -f noninteractive tzdata \
-    # Install Miniconda
-    && curl -Ls https://github.com/mamba-org/micromamba-releases/releases/download/2.0.2-0/micromamba-linux-64.tar.bz2 | tar -xj -C /tmp bin/micromamba \
-    && mv /tmp/bin/micromamba ${MAMBA_EXE} \
-    && rmdir /tmp/bin \
-    # Run init (commented out as I have this included in my .zshrc already)
-    # micromamba shell init --shell bash --root-prefix=${MAMBA_ROOT_PREFIX} \
-    # Information
-    && micromamba info \
-    # Give other users ability to use conda
-    && mkdir ${MAMBA_ROOT_PREFIX} \
-    && chmod -R a+rwX ${MAMBA_ROOT_PREFIX} --changes \
-    # Remove packages to reduce image bloat
-    && apt-get -y remove curl bzip2 \
-    # && apt-get -y autoremove \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* /var/log/dpkg.log
-    # System level conda configuration
-    # && echo "changeps1: False" > ${MAMBA_ROOT_PREFIX}/.condarc
-
-# Activate the base env by default
-ENV PATH="${MAMBA_ROOT_PREFIX}/bin:${PATH}" \
-    CONDA_DEFAULT_ENV="base" \
-    CONDA_PREFIX="${MAMBA_ROOT_PREFIX}" \
-    CONDA_PROMPT_MODIFIER="(base)" \
-    CONDA_SHLVL="1"
+# The ARG applies to all `apt` use in RUN, but won't persist into the container.
+ARG DEBIAN_FRONTEND=noninteractive
 
 ## TERM (matters to apps like ZSH/TMUX/...) ############################################################################
-ENV TERM=xterm-256color
+ENV TERM=xterm-256color \
+    COLORTERM=truecolor
 
 ## LANG ################################################################################################################
 ENV LC_ALL=C.UTF-8 \
@@ -48,112 +14,212 @@ ENV LC_ALL=C.UTF-8 \
 ## UNMINIMIZE UBUNTU ###################################################################################################
 RUN yes | unminimize
 
-
-## DOCKER IN DOCKER ####################################################################################################
-
 ## INSTALL #############################################################################################################
 RUN apt-get update \
-    && apt-get -y install sudo build-essential openssh-client man-db git-man manpages manpages-dev manpages-posix manpages-posix-dev plantuml tzdata curl ncurses-term \
+    && apt-get -y install \
+        sudo \
+        tzdata \
+        build-essential \
+        openssh-client \
+        man-db \
+        git-man \
+        manpages \
+        manpages-dev \
+        manpages-posix \
+        manpages-posix-dev \
+        tzdata \
+        curl \
+        ncurses-term \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /var/log/dpkg.log
+
 
 ## USER SETUP ##########################################################################################################
 ENV USER=harrison.rodgers \
     GROUP=harrison.rodgers \
     UID=501211 \
     GID=1001
-ENV HOME=/home/$USER
-ENV PATH=$HOME/.bin:$PATH
+ENV HOME="/home/${USER}"
 RUN groupadd -g $GID $GROUP \
     && useradd -u $UID -g $GID -d $HOME -s /bin/sh $USER --create-home -k /dev/null \
     # password-less sudo inside the container
     && echo "$USER ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+
+## Sandbox #############################################################################################################
+RUN mkdir -p "/sandbox/${USER}" \
+    && chown $UID:$GID "/sandbox/${USER}"
 
 ## USER ACTIVATE FOR REST OF DOCKERFILE (note: after this point, need to use sudo) #####################################
 USER $UID:$GID
 WORKDIR $HOME
 
 ## INSTALL NIX #########################################################################################################
-ENV PATH=$HOME/.nix-profile/bin:$PATH \
-    NIXPKGS_ALLOW_UNFREE=1
-RUN curl -L https://nixos.org/nix/install | sh \
-    && nix-channel --update
+RUN sudo mkdir -p /etc/nix && sudo sh -c 'printf "experimental-features = nix-command flakes" > /etc/nix/nix.conf'
 
-## INSTALL PACKAGES ####################################################################################################
-RUN nix-env -iA \
-# reference
-    # nixpkgs.man \
-    # nixpkgs.manpages \
-    # nixpkgs.stdman \
-    # nixpkgs.llvm-manpages \
-    # nixpkgs.clang-manpages \
-    # nixpkgs.man-pages \
-    # nixpkgs.posix_man_pages \
-# shell
-    nixpkgs.zsh \
-    nixpkgs.zsh-fzf-tab \
-    nixpkgs.zsh-syntax-highlighting \
-# prompt
-    nixpkgs.starship \
-    # nixpkgs.zsh-powerlevel10k # consider, faster, though zsh only
-# container
-    nixpkgs.docker \
-# multiplexer
-    nixpkgs.tmux \
-# python (using micromamba instead)
-    # nixpkgs.python310Full \
-# editor (using appimage instead)
-    # nixpkgs.neovim  \
-    nixpkgs.nano \
-# backup 
-    nixpkgs.nano \ 
-# misc
-    nixpkgs.git \
-    nixpkgs.direnv \
-    nixpkgs.fzf \
-    nixpkgs.ripgrep \
-    # nixpkgs.ripgrep-all \
-    nixpkgs.fd \
-    nixpkgs.tree \
-    nixpkgs.bat \
-    nixpkgs.eza \
-    nixpkgs.lnav \
-    nixpkgs.sta \
-    nixpkgs.gawk \
-    nixpkgs.less \
-    nixpkgs.zoxide \
-    nixpkgs.kubectl \
-    nixpkgs.renameutils \
-# to complie nvim tree-sitter parsers
-    nixpkgs.gcc \
-# neovim, lsp, formatters, linters
-    # note: most python formatter/linter are managed in the app's conda env
-    # nixpkgs.ruff \
-    nixpkgs.ruff-lsp \
-    nixpkgs.nodePackages.neovim \
-    nixpkgs.pyright \
-    nixpkgs.yaml-language-server \
-    nixpkgs.vim-language-server \
-    nixpkgs.nodePackages.bash-language-server \
-    nixpkgs.dockerfile-language-server-nodejs \
-    nixpkgs.vscode-langservers-extracted \
-    nixpkgs.stylua \
-    nixpkgs.gitlint \
-    nixpkgs.yamllint \
-    nixpkgs.luajitPackages.luacheck \
-# misc dev 
-    nixpkgs.kustomize \
-    nixpkgs.plantuml \
-# cleanup
-    # && nix-env -u \
-    && nix-env --delete-generations old \
-    && nix-store --gc \
-    && nix-store --optimize \
-    && nix-store --verify --check-contents
+ENV PATH="${HOME}/.nix-profile/bin:${PATH}" \
+    NIXPKGS_ALLOW_UNFREE=1
+
+RUN mkdir -p "${HOME}/.config/nixpkgs/" \
+    && echo '{ allowUnfree = true; }' > "${HOME}/.config/nixpkgs/config.nix"
+
+RUN curl -L https://nixos.org/nix/install | sh -s -- --no-daemon
+
+## PACKAGES ############################################################################################################
+RUN nix profile add --impure \
+# shell & prompt
+        nixpkgs#zsh \
+        nixpkgs#zsh-fzf-tab \
+        nixpkgs#zsh-syntax-highlighting \
+        nixpkgs#starship \
+        # nixpkgs#zsh-powerlevel10k # consider, faster, though zsh only
+# terminal multiplexer
+        nixpkgs#tmux \
+# editors (nano as a fallback; neovim is installed below, wrapped with nvim-treesitter)
+        nixpkgs#nano \
+# compiler, used by nvim to build tree-sitter parsers
+        nixpkgs#gcc \
+# tree-sitter CLI, required by nvim-treesitter (:checkhealth) to build/install parsers
+        nixpkgs#tree-sitter \
+# core cli
+        nixpkgs#git \
+        nixpkgs#less \
+        nixpkgs#gawk \
+        nixpkgs#wget \
+        nixpkgs#curl \
+        nixpkgs#tree \
+        nixpkgs#gnutar \
+        nixpkgs#zip \
+        nixpkgs#unzip \
+# per-directory env vars (.envrc)
+        nixpkgs#direnv \
+# smarter cd that learns your most used directories
+        nixpkgs#zoxide \
+# fuzzy finder
+        nixpkgs#fzf \
+# modern replacements: grep, find, cat, ls
+        nixpkgs#ripgrep \
+        # nixpkgs#ripgrep-all \
+        nixpkgs#fd \
+        nixpkgs#bat \
+        nixpkgs#eza \
+# bulk rename files in your editor (qmv, imv)
+        nixpkgs#renameutils \
+# determine types of files
+        nixpkgs#file \
+# system inspection: processes, open files, network (netstat, ifconfig)
+        nixpkgs#htop \
+        nixpkgs#lsof \
+        nixpkgs#net-tools \
+# log file viewer
+        nixpkgs#lnav \
+# simple statistics (mean, stddev, ...) from numbers on stdin
+        nixpkgs#sta \
+# containers & kubernetes
+        nixpkgs#docker \
+        nixpkgs#kubectl \
+        nixpkgs#kustomize \
+# NOTE: may want to skip as it takes some time to build
+        nixpkgs#nomad \
+# NOTE: may want to skip as it takes a long time to build
+        nixpkgs#terraform \
+# python: env manager (envs live in $MAMBA_ROOT_PREFIX) and fast pip/venv replacement
+        nixpkgs#micromamba \
+        nixpkgs#uv \
+        # nixpkgs#python310Full \  # using micromamba envs instead
+# reference / man pages (using apt's manpages instead as that will cover the non-nix stuff also)
+        # nixpkgs#man \
+        # nixpkgs#manpages \
+        # nixpkgs#stdman \
+        # nixpkgs#llvm-manpages \
+        # nixpkgs#clang-manpages \
+        # nixpkgs#man-pages \
+        # nixpkgs#posix_man_pages \
+# claude code sandbox dependencies
+        nixpkgs#bubblewrap \
+        nixpkgs#socat \
+# binary cache client (used at container start: `cachix use claude-code`)
+        nixpkgs#cachix \
+# init process (PID 1, see ENTRYPOINT below): reaps zombie processes and forwards signals so `stop` is immediate
+        nixpkgs#tini \
+# language servers (for neovim)
+        nixpkgs#ty \
+        nixpkgs#bash-language-server \
+        nixpkgs#yaml-language-server \
+        nixpkgs#vim-language-server \
+        nixpkgs#dockerfile-language-server \
+        # html, css, json, eslint
+        nixpkgs#vscode-langservers-extracted \
+        # nixpkgs#nodePackages.neovim \
+# python: lint/format, and find unused functions/variables/...
+        nixpkgs#ruff \
+        nixpkgs#python314Packages.vulture \
+        # latex2text: lets render-markdown.nvim render LaTeX math in markdown
+        nixpkgs#python314Packages.pylatexenc \
+# shell: lint and format
+        nixpkgs#shellcheck \
+        nixpkgs#shfmt \
+# lua: format and lint
+        nixpkgs#stylua \
+        nixpkgs#lua-language-server \
+# yaml, markdown, ansible
+        nixpkgs#yamllint \
+        nixpkgs#markdownlint-cli2 \
+        nixpkgs#ansible-lint \
+# sql: lint and auto-format
+        nixpkgs#sqlfluff \
+# dockerfiles
+        nixpkgs#hadolint \
+# terraform .tf files
+        nixpkgs#tflint \
+# .proto files: lint and check for breaking changes
+        nixpkgs#buf \
+# xml: xmllint
+        nixpkgs#libxml2 \
+# git commit message lint
+        nixpkgs#gitlint \
+# spelling mistakes in code https://github.com/crate-ci/typos/blob/main/docs/comparison.md
+        nixpkgs#typos \
+        nixpkgs#typos-lsp \
+# broken link checker (markdown, html, ...)
+        nixpkgs#lychee \
+# report on credential leaks: gitleaks git -v
+        nixpkgs#gitleaks \
+# structured data: query json, turn command output into json, make json greppable, query yaml
+        nixpkgs#jq \
+        nixpkgs#jc \
+        nixpkgs#gron \
+        nixpkgs#yq-go \
+# convert hcl2 (nomad, terraform) to json so it's easier for claude to read
+        nixpkgs#hcl2json \
+        # nixpkgs#plantuml \  # TODO: uncomment later, for now avoid as it needs building on arm
+# search and rewrite code using its ast
+        nixpkgs#ast-grep \
+# diff viewers: pager for git output, and structural diff that understands syntax
+        nixpkgs#delta \
+        nixpkgs#difftastic \
+# count lines of code
+        nixpkgs#tokei \
+        nixpkgs#cloc \
+# benchmark commands against each other
+        nixpkgs#hyperfine \
+# cleanup (only shrinks the image if chained onto the same RUN as the installs)
+    && nix store gc \
+    && nix store optimise \
+    && nix store verify --all --no-trust
+
+## NEOVIM (wrapped with nvim-treesitter + all grammars/queries from nixpkgs) ###########################################
+# `withAllGrammars` pulls in its parsers and queries only via a wrapped neovim, so install neovim that way.
+# wrapRc = false: keep loading ~/.config/nvim/init.lua instead of a generated init.
+RUN nix profile add --impure --expr \
+    'let p = (builtins.getFlake "nixpkgs").legacyPackages.${builtins.currentSystem}; \
+     in p.wrapNeovimUnstable p.neovim-unwrapped { \
+          plugins = [ p.vimPlugins.nvim-treesitter.withAllGrammars ]; \
+          wrapRc = false; \
+        }'
 
 ## REMOVE python if it snuck in (as we use micromamba) #################################################################
-RUN sudo apt-get remove -y python3 \
-    && sudo apt-get -y autoremove
+#RUN sudo apt-get remove -y python3 \
+#    && sudo apt-get -y autoremove
 
 ## MAN & COMPLETION (UPDATE DBS AFTER ALL THE ABOVE INSTALLS) ##########################################################
 RUN sudo mandb --create
@@ -161,33 +227,62 @@ RUN sudo mandb --create
 ## CONFIG FILES ########################################################################################################
 COPY --chown=$UID:$GID ["home", "${HOME}/"]
 
-## NVIM INSTALL ########################################################################################################
-RUN mkdir -p $HOME/.bin \
-    && curl -L -o /tmp/nvim.appimage https://github.com/neovim/neovim/releases/download/v0.10.2/nvim.appimage \
-    && chmod u+x /tmp/nvim.appimage \
-    && /tmp/nvim.appimage --appimage-extract \
-    && rm /tmp/nvim.appimage \
-    && mv squashfs-root $HOME/.bin \
-    && ln -s $HOME/.bin/squashfs-root/usr/bin/nvim $HOME/.bin/nvim
+## BAT THEME ###########################################################################################################
+# register the custom selenized-light theme from home/.config/bat/themes
+RUN bat cache --build
 
 ## NVIM SETUP ##########################################################################################################
-RUN mkdir -p $HOME/.local/share/nvim/site/autoload \
-    # paq-nvim install
-    && echo "Installing paq-nvim:" \
-    && git clone --depth=1 https://github.com/savq/paq-nvim.git $HOME/.local/share/nvim/site/pack/paqs/start/paq-nvim \
-    && echo "Installing nvim packages using paq-nvim:" \
-    && nvim --headless -u NONE -c 'lua require("config/bootstrap").bootstrap_paq()' \
-    && echo "" \
-    # treesitter install (sync is slow, but safest way to do it automated)
-    && echo "Installing nvim-treesitter language parsers:" \
-    && nvim --headless -c "TSInstallSync all" -c "qa"
+# Plugins are managed by neovim's built-in vim.pack (see home/.config/nvim/lua/config/plugins.lua). The first headless
+# start installs the latest upstream version of each (no lockfile is shipped); the second fails the build if the config errors.
+RUN echo "Installing nvim plugins using vim.pack:" \
+    && nvim --headless -c 'qa' \
+    && echo "Checking the nvim config loads cleanly:" \
+    && nvim --headless -c 'if v:errmsg != "" | echo v:errmsg | cquit 1 | endif' -c 'qa'
+
+## TRESITTER SETUP (for now using nix pre-built source) ################################################################
+#   # treesitter install (sync is slow, but safest way to do it automated)
+#   && echo "Installing nvim-treesitter language parsers:" \
+#   && nvim --headless -c "TSInstallSync all" -c "qa"
 
 ## ZSH #################################################################################################################
-ENV ZDOTDIR=$HOME/.config/zsh
+ENV ZDOTDIR="$HOME/.config/zsh/"
 
 ## PYTHON ##############################################################################################################
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTEST_ADDOPTS="-p no:cacheprovider"
 
+## MICROMAMBA ##########################################################################################################
+ENV MAMBA_ROOT_PREFIX="/sandbox/${USER}/conda/" \
+    CONDA_ENVS_PATH="/sandbox/${USER}/conda/envs/" \
+    CONDA_PKGS_DIRS="/sandbox/${USER}/conda/pkgs/"
+
+RUN mkdir -p "${HOME}/.cache/mamba/proc/" \
+    mkdir -p "${CONDA_ENVS_PATH}" \
+    mkdir -p "${CONDA_PKGS_DIRS}"
+
+COPY --chown=$UID:$GID [".condarc", "${MAMBA_ROOT_PREFIX}/.condarc"]
+
+## UV #################################################################################################################
+
+ENV UV_PROJECT_ENVIRONMENT="/sandbox/${USER}/uv/venv/" \
+    UV_PYTHON_INSTALL_DIR="/sandbox/${USER}/uv/python/" \
+    UV_TOOL_BIN_DIR="/sandbox/${USER}/uv/tool_bin/" \
+    UV_TOOLS_DIR="/sandbox/${USER}/uv/tools/" \
+    UV_NO_CACHE=1 \
+    UV_COMPILE_BYTECODE=1 \
+    UV_NO_DEV=1
+
+RUN mkdir -p "${UV_PROJECT_ENVIRONMENT}" \
+    mkdir -p "${UV_PYTHON_INSTALL_DIR}" \
+    mkdir -p "${UV_TOOL_BIN_DIR}" \
+    mkdir -p "${UV_TOOLS_DIR}"
+
+## UV ##################################################################################################################
+
+RUN mkdir -p "${HOME}/.claude/" \
+    && echo '{ hasCompletedOnboarding: true }' > "${HOME}/.claude.json"
+
 ## CMD #################################################################################################################
-CMD ["tmux","-S","/tmp/tmux.sock"]
+# tini as PID 1: `sleep` alone ignores SIGTERM (so stopping waits for the kill timeout) and never reaps orphaned processes
+ENTRYPOINT ["tini", "--"]
+CMD ["sleep","infinity"]

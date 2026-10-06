@@ -1,0 +1,39 @@
+: 1670000000:0;nix shell --refresh nixpkgs#cowsay -c bash # shell on demand, and specify command
+: 1670000000:0;nix shell --refresh nixpkgs#cowsay # shell on demand, check upstream for new version
+: 1670000000:0;nix shell nixpkgs#cowsay # shell on demand
+: 1670000000:0;nix run nixpkgs/nixpkgs-25.11-darwin#cowsay 'hi' # run on demand
+: 1670000000:0;nix run nixpkgs/nixpkgs-unstable#cowsay 'hi' # run on demand
+: 1670000000:0;nix run nixpkgs#cowsay 'hi' -c bash # run on demand, and specify command
+: 1670000000:0;nix run nixpkgs#cowsay 'hi' # run on demand
+: 1670000000:0;nix run --refresh nixpkgs#cowsay 'hi' # run on demand, check upstream for new version
+: 1670000000:0;nix search nixpkgs ^ # list all packages in flake
+: 1670000000:0;nix search nixpkgs ^ --json # list all packages in flake
+: 1670000000:0;nix search nixpkgs cowsay # search for package in flake
+: 1670000000:0;nix search nixpkgs cowsay --json # search for package in flake
+: 1670000000:0;nix search nixpkgs "cowsay|lolcat" # search for package in flake with regex
+: 1670000000:0;nix search nixpkgs "cowsay$" # search for package in flake with regex
+: 1670000000:0;nix search nixpkgs cowsay 'neo' # search for package in flake with extra filter
+: 1670000000:0;nix search nixpkgs cowsay --exclude 'neo' # search for package in flake with extra filter
+: 1670000000:0;nix search nixpkgs cowsay -e 'neo' # search for package in flake with extra filter
+: 1670000000:0;nix search nixpkgs fastapi-cli # search for packages under a category
+: 1670000000:0;nix search nixpkgs#python314Packages fastapi-cli # search for packages under a category
+: 1670000000:0;nix profile upgrade cowsay --refresh
+: 1670000000:0;nix profile upgrade cowsay
+: 1670000000:0;nix profile upgrade --all --refresh
+: 1670000000:0;nix profile upgrade --all
+: 1670000000:0;nix profile upgrade claude-code --refresh --impure
+: 1670000000:0;nix profile add nixpkgs#claude-code --refresh --impure
+: 1670000000:0;nix profile add nixpkgs#cowsay
+: 1670000000:0;nix profile remove nixpkgs#cowsay
+: 1670000000:0;nix profile history
+: 1670000000:0;git rebase --exec 'git commit --amend --reset-author --no-edit' main
+: 1670000000:0;git rebase --exec 'git commit --amend --reset-author --no-edit' --root
+: 1670000000:0;git rebase --exec 'git commit --amend --reset-author --no-edit --date=now && sleep 1' main
+: 1670000000:0;git rebase --exec 'git commit --amend --reset-author --no-edit --date=now && sleep 1' --root
+: 1670000000:0;git symbolic-ref refs/heads/master refs/heads/main
+: 1670000000:0;git commit --amend --reset-author --no-edit
+: 1670000000:0;git reset —soft HEAD^
+: 1670000000:0;git rebase -i --root
+: 1670000000:0;git rebase -i master
+: 1670000000:0;git rebase -i HEAD~2
+: 1670000000:0;git push -u origin HEAD

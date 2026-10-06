@@ -1,0 +1,4 @@
+env
+.DS_Store
+nvim-pack-lock.json
+*.crt

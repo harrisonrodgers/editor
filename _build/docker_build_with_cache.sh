@@ -2,6 +2,5 @@
 
 docker build \
     --pull \
-    --no-cache \
-    -t editor:`date +"%Y-%m-%d"` \
+    -t ${USER}-editor:`date +"%Y-%m-%d"` \
     .
