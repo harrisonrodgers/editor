@@ -1,39 +1,47 @@
+## FIRST ###############################################################################################################
+
+# Nix
+source ~/.nix-profile/etc/profile.d/nix.sh
+
+########################################################################################################################
+
 # Editor defaults
 export EDITOR='nvim'
 export VISUAL='nvim'
 
 # Set XDG Base Directory Specification
-export XDG_CONFIG_HOME="${HOME}/.config/"
-export XDG_CACHE_HOME="${HOME}/.cache/"
-export XDG_STATE_HOME="${HOME}/.local/state/"
-export XDG_DATA_HOME="${HOME}/.local/share/"
-export XDG_BIN_HOME="${HOME}/.local/bin/"
+export XDG_CONFIG_HOME="${HOME}/.config"
+export XDG_CACHE_HOME="${HOME}/.cache"
+export XDG_STATE_HOME="${HOME}/.local/state"
+export XDG_DATA_HOME="${HOME}/.local/share"
+export XDG_BIN_HOME="${HOME}/.local/bin"
 
-mkdir -p "${XDG_CONFIG_HOME}"
-mkdir -p "${XDG_CACHE_HOME}"
-mkdir -p "${XDG_STATE_HOME}"
-mkdir -p "${XDG_DATA_HOME}"
-mkdir -p "${XDG_BIN_HOME}"
+typeset -U path # keep PATH entries unique, so nested shells (tmux, subshells) don't stack duplicates
+path=("${XDG_BIN_HOME}" $path) # assign via the array: assigning the PATH string would bypass the uniqueness
 
 # Use XDG Base Directory Specification: https://wiki.archlinux.org/title/XDG_Base_Directory
-export LESSHISTFILE="${XDG_STATE_HOME}/less/history"
 export INPUTRC="${XDG_CONFIG_HOME}/readline/inputrc"
-export GITLINT_CONFIG="${XDG_CONFIG_HOME}/gitlint/gitlint"
+export MYPY_CACHE_DIR="${XDG_CACHE_HOME}/mypy"
+export RUFF_CACHE_DIR="${XDG_CACHE_HOME}/ruff"
+export PYTHONPYCACHEPREFIX="${XDG_CACHE_HOME}/python"
+export LESSHISTFILE="${XDG_STATE_HOME}/less/history"
 export PYTHON_HISTORY="${XDG_STATE_HOME}/python/history"
 export SQLITE_HISTORY="${XDG_STATE_HOME}/sqlite/history"
-export MYPY_CACHE_DIR="${XDG_CACHE_HOME}/mypy/"
-export RUFF_CACHE_DIR="${XDG_CACHE_HOME}/ruff/"
-export PYTHONPYCACHEPREFIX="${XDG_CACHE_HOME}/python/"
 
-mkdir -p "${XDG_CACHE_HOME}/zsh/"
-mkdir -p "${XDG_STATE_HOME}/zsh/"
-
-# Nix:
-export NIXPKGS_ALLOW_UNFREE=1
+# Create the base dirs, plus the parent dirs of the history files above (less/python/sqlite will not create them)
+mkdir -p \
+    "${XDG_CONFIG_HOME}" \
+    "${XDG_CACHE_HOME}" \
+    "${XDG_DATA_HOME}" \
+    "${XDG_BIN_HOME}" \
+    "${XDG_CACHE_HOME}"/{zsh,mypy,ruff,python} \
+    "${XDG_STATE_HOME}"/{zsh,less,python,sqlite}
 
 # GNU ls: use dircolors if available
 if command -v dircolors >/dev/null 2>&1; then
     eval "$(dircolors -b ~/.dircolors 2>/dev/null || dircolors -b)"
+    # Selenized dircolors (just default with one override)
+    export LS_COLORS="$LS_COLORS:ow=1;7;34:st=30;44:su=30;41"
 fi
 
 # Colorized output
@@ -45,21 +53,21 @@ alias fgrep='fgrep --color=auto'
 alias egrep='egrep --color=auto'
 
 # Terminal behavior
-stty -ixon # Disable XON/XOFF flow control (Ctrl+S/Ctrl+Q) so Ctrl+S can be used for forward history search
+stty -ixon 2>/dev/null # Disable XON/XOFF flow control (Ctrl+S/Ctrl+Q) so Ctrl+S can be used for forward history search
 
 # History behavior
-export HISTCONTROL=erasedups # Remove duplicates
 export HISTFILE="${XDG_STATE_HOME}/zsh/history"
 export HISTSIZE=10000        # Keep 10k entries in memory
-setopt APPEND_HISTORY        # Append to history file on exit
+export SAVEHIST=$HISTSIZE    # Save the same number to HISTFILE
 setopt HIST_IGNORE_DUPS      # Ignore duplicate commands
 setopt HIST_IGNORE_ALL_DUPS  # Remove older duplicate entries
 setopt HIST_REDUCE_BLANKS    # Remove extra spaces before saving
 setopt HIST_SAVE_NO_DUPS     # Don't save command if it's already in history
 setopt HIST_FIND_NO_DUPS     # Don't find duplicates in reverse-i-search
 setopt SHARE_HISTORY         # Share history between sessions
+#setopt APPEND_HISTORY       # Append to history file on exit
+#setopt INC_APPEND_HISTORY   # Append immediately, not just on exit
 setopt EXTENDED_HISTORY      # Save timestamp with history
-setopt INC_APPEND_HISTORY    # Append immediately, not just on exit
 setopt INTERACTIVE_COMMENTS  # Allow comments (#) in interactive shells.
 
 # Warn about background jobs before exit
@@ -77,7 +85,6 @@ eval "$(starship init zsh)"
 
 # Completion
 autoload -Uz compinit                              # load then initialize completion system
-zstyle ':zim:completion' dumpfile "${XDG_CACHE_HOME}/zsh/zcompdump" # set the dumpfile location
 zstyle ':completion:*' menu select                 # autocompletion with an arrow-key driven interface
 zstyle ':completion::complete:*' gain-privileges 1 # autocompletion of privileged environments in privileged commands
 zstyle ':completion:*' cache-path "${XDG_CACHE_HOME}/zsh/zcompcache" # set cache file location
@@ -93,29 +100,23 @@ bindkey "\e[3~" delete-char # Bind delete key to delete-char function as some te
 alias ls='eza --git --binary'
 alias cat='bat'
 
-##########################################
+# Less/man colors, tuned for Selenized light (ANSI indices, so the terminal palette sets the real colors)
+export LESS_TERMCAP_mb=$'\e[1;32m'    # blink -> bold green
+export LESS_TERMCAP_md=$'\e[1;32m'    # bold (headings, options) -> bold green
+export LESS_TERMCAP_me=$'\e[0m'       # end bold/blink
+export LESS_TERMCAP_so=$'\e[7m'       # standout (status line, search hits) -> reverse video
+export LESS_TERMCAP_se=$'\e[0m'       # end standout
+export LESS_TERMCAP_us=$'\e[4;31m'    # underline (arguments) -> underlined red
+export LESS_TERMCAP_ue=$'\e[0m'       # end underline
 
-source ~/.nix-profile/etc/profile.d/nix.sh
-
-#eval "$(direnv hook zsh)"
-
-## Dircolors
-# Selenized dircolors (just default with one override)
-#export LS_COLORS="$LS_COLORS:ow=1;7;34:st=30;44:su=30;41"
-
-## Syntax
-#source /nix/store/*-zsh-syntax-highlighting-*/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
-
-# Less Colors (from "jan-warchol/selenized")
-#LESS_TERMCAP_mb=$(printf "\e[1;37m")
-#LESS_TERMCAP_md=$(printf "\e[1;37m")
-#LESS_TERMCAP_me=$(printf "\e[0m")
-#LESS_TERMCAP_se=$(printf "\e[0m")
-#LESS_TERMCAP_ue=$(printf "\e[0m")
+########################################################################################################################
 
 # Less colors (source code highlighting, warning it may be slow so use `less -L` to disable)
-#export LESSOPEN="| bat --color=always %s"
-#export LESS='-R --mouse --wheel-lines=5 --quit-if-one-screen'
+export LESSOPEN="| bat --color=always %s"
+export LESS='-R --mouse --wheel-lines=5 --quit-if-one-screen'
+
+# Direnv (applies .envrc when cd'ing into a folder)
+eval "$(direnv hook zsh)"
 
 # Micromamba
 ,m() {
@@ -147,13 +148,13 @@ compdef _comma_r ,r
 # Conda: Activate
 ,ca() {
     if ! test -f tasks.py
-    then 
+    then
         echo "Not a supported repo, no tasks.py found."
-    return 1
+        return 1
     else
+        local env_name="${PWD:t}"
         micromamba deactivate
-        basename=`basename $PWD`
-        micromamba activate $basename
+        micromamba activate "$env_name"
         rehash
     fi
 }
@@ -161,16 +162,16 @@ compdef _comma_r ,r
 # Conda: Recreate
 ,cr() {
     if ! test -f tasks.py
-    then 
+    then
         echo "Not a supported repo, no tasks.py found."
-    return 1
+        return 1
     else
+        local env_name="${PWD:t}"
         micromamba deactivate
-        basename=`basename $PWD`
-        # micromamba env remove -n $basename # use rm instead to avoid complaint if non-existant
-        rm -rf "${MAMBA_ROOT_PREFIX}/envs/$basename" 2>/dev/null
-        micromamba create -n $basename python=3.12 invoke jinja2 pyyaml --yes --quiet
-        micromamba activate $basename
+        # micromamba env remove -n "$env_name" # use rm instead to avoid complaint if non-existant
+        rm -rf "${MAMBA_ROOT_PREFIX:?}/envs/${env_name:?}" 2>/dev/null
+        micromamba create -n "$env_name" python=3.12 invoke jinja2 pyyaml --yes --quiet
+        micromamba activate "$env_name"
         inv bootstrap develop hooks
         rehash
         # micromamba clean --packages --tarballs --force-pkgs-dirs --yes --quiet
@@ -192,8 +193,8 @@ export FZF_ALT_C_OPTS="--preview 'tree -C {} | head -200'"
 export FZF_CTRL_R_OPTS="--preview 'echo {}' --preview-window down:hidden:wrap --bind '?:toggle-preview'"
 export FZF_CTRL_T_OPTS="--preview '((test -f {} && bat --color always {}) || tree -C {}) 2> /dev/null | head -200'"
 
-## FZF-Tab Completion (make sure it is last plugin so it's key-bindings win)
-source /nix/store/*-zsh-fzf-tab-*/share/fzf-tab/fzf-tab.plugin.zsh
+## FZF-Tab Completion (load after compinit, before syntax highlighting)
+source ~/.nix-profile/share/fzf-tab/fzf-tab.plugin.zsh
 
 zstyle ':completion:*:descriptions' format '[%d]'
 # do not sort git checkout or commit
@@ -224,13 +225,18 @@ zstyle ':fzf-tab:*' use-fzf-default-opts yes
 zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza -1 --color=always $realpath'
 
 ## Micromamba
-# the hook reads MAMBA_ROOT_PREFIX from the environment (it does not set it), so export it first
-export MAMBA_ROOT_PREFIX="/sandbox/${USER}/conda"
-export CONDA_ENVS_PATH="${MAMBA_ROOT_PREFIX}/envs"
-export CONDA_PKGS_DIRS="${MAMBA_ROOT_PREFIX}/pkgs"
 # the nix package wraps the binary as ".mamba-wrapped", which the hook rejects (name must be micromamba),
 # so force the detected name or the micromamba shell function never gets defined
-eval "$(micromamba shell hook --shell zsh | sed 's/^__exe_name=.*/__exe_name=micromamba/')"
+# The hook output is static text, but generating it runs the binary (~15 ms), so cache it and source the file (~1 ms).
+# micromamba is pinned by the image so the cache is never invalidated; delete it to regenerate (e.g. after an upgrade).
+micromamba_hook="${XDG_CACHE_HOME}/zsh/micromamba-hook.zsh"
+if [[ ! -s "$micromamba_hook" ]]; then
+    micromamba shell hook --shell zsh | sed 's/^__exe_name=.*/__exe_name=micromamba/' >| "$micromamba_hook"
+fi
+source "$micromamba_hook"
+unset micromamba_hook
 
-# initialize empty base
-#mkdir -p "$MAMBA_ROOT_PREFIX/conda-meta"
+## LAST ################################################################################################################
+
+## Syntax (highlighting of commands in the prompt, spot syntax errors before running) PLACE NEAR END OF .zshrc
+source ~/.nix-profile/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh

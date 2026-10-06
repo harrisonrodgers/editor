@@ -7,4 +7,10 @@ container build \
     -t ${USER}-editor:`date +"%Y-%m-%d"` \
     .
 
+echo "Running: 'container image ls'"
+container image ls
+
+echo "Running: 'container ls -a'"
+container ls -a
+
 #   --progress plain \

@@ -2,8 +2,6 @@
     gpgSign = true
 [tag]
     gpgSign = true
-[http]
-    sslVerify = true
 
 [alias]
     s = status
@@ -13,16 +11,24 @@
     dlog = -c diff.external=difft log --ext-diff
     dshow = -c diff.external=difft show --ext-diff
 
+[init]
+    defaultBranch = master
+[fetch]
+    # Remove remote-tracking branches that no longer exist upstream
+    prune = true
 [pull]
     rebase = True
 [push]
-    default = simple
+    # `git push` on a new branch sets the upstream automatically
+    autoSetupRemote = true
 [rebase]
     autoStash = true
+[rerere]
+    # Remember how conflicts were resolved and reapply them
+    enabled = true
 
 [log]
     decorate = true
-    color = true
 [format]
     pretty = custom
 [pretty]
@@ -39,6 +45,7 @@
     light = true
 
 [diff]
+    algorithm = histogram
     colorMoved = default
     tool = vimdiff3
 [difftool "difftastic"]
@@ -66,4 +73,3 @@
 # Cache username + password for 5 years to avoid having to type username + password
 [credential]
     helper = cache --timeout=157680000
-

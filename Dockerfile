@@ -11,8 +11,15 @@ ENV TERM=xterm-256color \
 ENV LC_ALL=C.UTF-8 \
     LANG=C.UTF-8
 
+## SHELL ###############################################################################################################
+# Fail a RUN if any command in a pipe fails (not just the last one), e.g. `curl ... | sh` with a failed download.
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
 ## UNMINIMIZE UBUNTU ###################################################################################################
-RUN yes | unminimize
+# unminimize asks several questions (its own, then apt's "Do you want to continue? [Y/n]"), so answer all of them with
+# `yes`. `yes` gets SIGPIPE when unminimize exits, which pipefail reports as exit 141, so `|| true` ignores yes's status
+# only; a failure of unminimize itself still fails the build.
+RUN { yes || true; } | unminimize
 
 ## INSTALL #############################################################################################################
 RUN apt-get update \
@@ -27,7 +34,6 @@ RUN apt-get update \
         manpages-dev \
         manpages-posix \
         manpages-posix-dev \
-        tzdata \
         curl \
         ncurses-term \
     && apt-get clean \
@@ -40,18 +46,19 @@ ENV USER=harrison.rodgers \
     UID=501211 \
     GID=1001
 ENV HOME="/home/${USER}"
-RUN groupadd -g $GID $GROUP \
-    && useradd -u $UID -g $GID -d $HOME -s /bin/sh $USER --create-home -k /dev/null \
+# useradd -l (--no-log-init): with a high UID, the lastlog/faillog entries make those files huge, and they bloat the image
+RUN groupadd -g "${GID}" "${GROUP}" \
+    && useradd -l -u "${UID}" -g "${GID}" -d "${HOME}" -s /bin/sh --create-home -k /dev/null "${USER}" \
     # password-less sudo inside the container
-    && echo "$USER ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+    && echo "${USER} ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
 ## Sandbox #############################################################################################################
 RUN mkdir -p "/sandbox/${USER}" \
-    && chown $UID:$GID "/sandbox/${USER}"
+    && chown "${UID}:${GID}" "/sandbox/${USER}"
 
 ## USER ACTIVATE FOR REST OF DOCKERFILE (note: after this point, need to use sudo) #####################################
-USER $UID:$GID
-WORKDIR $HOME
+USER ${UID}:${GID}
+WORKDIR ${HOME}
 
 ## INSTALL NIX #########################################################################################################
 RUN sudo mkdir -p /etc/nix && sudo sh -c 'printf "experimental-features = nix-command flakes" > /etc/nix/nix.conf'
@@ -59,10 +66,10 @@ RUN sudo mkdir -p /etc/nix && sudo sh -c 'printf "experimental-features = nix-co
 ENV PATH="${HOME}/.nix-profile/bin:${PATH}" \
     NIXPKGS_ALLOW_UNFREE=1
 
-RUN mkdir -p "${HOME}/.config/nixpkgs/" \
+RUN mkdir -p "${HOME}/.config/nixpkgs" \
     && echo '{ allowUnfree = true; }' > "${HOME}/.config/nixpkgs/config.nix"
 
-RUN curl -L https://nixos.org/nix/install | sh -s -- --no-daemon
+RUN curl -fsSL https://nixos.org/nix/install | sh -s -- --no-daemon
 
 ## PACKAGES ############################################################################################################
 RUN nix profile add --impure \
@@ -118,10 +125,9 @@ RUN nix profile add --impure \
         nixpkgs#docker \
         nixpkgs#kubectl \
         nixpkgs#kustomize \
-# NOTE: may want to skip as it takes some time to build
-        nixpkgs#nomad \
-# NOTE: may want to skip as it takes a long time to build
-        nixpkgs#terraform \
+# NOTE: may want to skip as these take time to build and are likely not needed
+        # nixpkgs#nomad \
+        # nixpkgs#terraform \
 # python: env manager (envs live in $MAMBA_ROOT_PREFIX) and fast pip/venv replacement
         nixpkgs#micromamba \
         nixpkgs#uv \
@@ -225,7 +231,7 @@ RUN nix profile add --impure --expr \
 RUN sudo mandb --create
 
 ## CONFIG FILES ########################################################################################################
-COPY --chown=$UID:$GID ["home", "${HOME}/"]
+COPY --chown=${UID}:${GID} ["home", "${HOME}/"]
 
 ## BAT THEME ###########################################################################################################
 # register the custom selenized-light theme from home/.config/bat/themes
@@ -245,44 +251,48 @@ RUN echo "Installing nvim plugins using vim.pack:" \
 #   && nvim --headless -c "TSInstallSync all" -c "qa"
 
 ## ZSH #################################################################################################################
-ENV ZDOTDIR="$HOME/.config/zsh/"
+ENV ZDOTDIR="${HOME}/.config/zsh"
 
 ## PYTHON ##############################################################################################################
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTEST_ADDOPTS="-p no:cacheprovider"
 
 ## MICROMAMBA ##########################################################################################################
-ENV MAMBA_ROOT_PREFIX="/sandbox/${USER}/conda/" \
-    CONDA_ENVS_PATH="/sandbox/${USER}/conda/envs/" \
-    CONDA_PKGS_DIRS="/sandbox/${USER}/conda/pkgs/"
+ENV MAMBA_ROOT_PREFIX="/sandbox/${USER}/conda" \
+    CONDA_ENVS_PATH="/sandbox/${USER}/conda/envs" \
+    CONDA_PKGS_DIRS="/sandbox/${USER}/conda/pkgs"
 
-RUN mkdir -p "${HOME}/.cache/mamba/proc/" \
-    mkdir -p "${CONDA_ENVS_PATH}" \
-    mkdir -p "${CONDA_PKGS_DIRS}"
+RUN mkdir -p "${HOME}/.cache/mamba/proc" \
+    && mkdir -p "${CONDA_ENVS_PATH}" \
+    && mkdir -p "${CONDA_PKGS_DIRS}"
 
-COPY --chown=$UID:$GID [".condarc", "${MAMBA_ROOT_PREFIX}/.condarc"]
+COPY --chown=${UID}:${GID} [".condarc", "${MAMBA_ROOT_PREFIX}/.condarc"]
 
 ## UV #################################################################################################################
 
-ENV UV_PROJECT_ENVIRONMENT="/sandbox/${USER}/uv/venv/" \
-    UV_PYTHON_INSTALL_DIR="/sandbox/${USER}/uv/python/" \
-    UV_TOOL_BIN_DIR="/sandbox/${USER}/uv/tool_bin/" \
-    UV_TOOLS_DIR="/sandbox/${USER}/uv/tools/" \
+ENV UV_PROJECT_ENVIRONMENT="/sandbox/${USER}/uv/venv" \
+    UV_PYTHON_INSTALL_DIR="/sandbox/${USER}/uv/python" \
+    UV_TOOL_BIN_DIR="/sandbox/${USER}/uv/tool_bin" \
+    UV_TOOLS_DIR="/sandbox/${USER}/uv/tools" \
     UV_NO_CACHE=1 \
     UV_COMPILE_BYTECODE=1 \
     UV_NO_DEV=1
 
+# `uv tool install` puts executables in UV_TOOL_BIN_DIR, so it must be on PATH (a separate ENV, as a variable set in an
+# ENV instruction can't be used by another variable in that same instruction)
+ENV PATH="${UV_TOOL_BIN_DIR}:${PATH}"
+
 RUN mkdir -p "${UV_PROJECT_ENVIRONMENT}" \
-    mkdir -p "${UV_PYTHON_INSTALL_DIR}" \
-    mkdir -p "${UV_TOOL_BIN_DIR}" \
-    mkdir -p "${UV_TOOLS_DIR}"
+    && mkdir -p "${UV_PYTHON_INSTALL_DIR}" \
+    && mkdir -p "${UV_TOOL_BIN_DIR}" \
+    && mkdir -p "${UV_TOOLS_DIR}"
 
-## UV ##################################################################################################################
+## Claude  #############################################################################################################
 
-RUN mkdir -p "${HOME}/.claude/" \
-    && echo '{ hasCompletedOnboarding: true }' > "${HOME}/.claude.json"
+RUN mkdir -p "${HOME}/.claude" \
+    && echo '{ "hasCompletedOnboarding": true }' > "${HOME}/.claude.json"
 
 ## CMD #################################################################################################################
 # tini as PID 1: `sleep` alone ignores SIGTERM (so stopping waits for the kill timeout) and never reaps orphaned processes
 ENTRYPOINT ["tini", "--"]
-CMD ["sleep","infinity"]
+CMD ["sleep", "infinity"]

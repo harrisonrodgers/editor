@@ -1,0 +1,2 @@
+# macOS Finder metadata, at any depth (otherwise `COPY home` would put it in the image)
+**/.DS_Store
