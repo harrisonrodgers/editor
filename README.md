@@ -51,7 +51,6 @@ Set `VERSION` in `run-container-simple.sh` to the build date. `claude` is instal
 | `telescope.nvim` (+ `plenary.nvim`) | pickers: files, grep, LSP, diagnostics |
 | `gitsigns.nvim`      | git gutter, blame                                |
 | `hlchunk.nvim`       | line number highlight for the current chunk      |
-| `render-markdown.nvim` | markdown rendering (`latex2text` for math)     |
 | `nvim-rooter.lua`    | cwd to project root                              |
 
 Built in, no plugin: completion (`autocomplete` + `vim.lsp.completion`), inlay hints, folding, linked editing, `:Undotree`, `:DiffTool`. Treesitter parsers come from nix.
@@ -72,3 +71,4 @@ Built in, no plugin: completion (`autocomplete` + `vim.lsp.completion`), inlay h
 - format: `stylua`, `shfmt`, `markdownlint-cli2`, `buf`, `sqlfluff`, `xmllint`; python by `ruff`
 - python on save: `ruff_fix` (repo config only) then the ruff LSP formats. Extra rules (`RET`, `TID252`) show in nvim only, never auto-fixed.
 - user ruff config (`~/.config/ruff/ruff.toml`) only applies in repos without their own.
+- line length 120 everywhere, from user-level configs that a project's own config overrides: `~/.config/stylua/stylua.toml` (also 4-space indent; found by `stylua --search-parent-directories`, which conform passes), `~/.config/ruff/ruff.toml`, `~/.config/sqlfluff/.sqlfluff` (also dialect postgres), `~/.config/markdownlint/markdownlint.jsonc` (passed with `--config` in `lint_format.lua`, as markdownlint-cli2 has no user-level location), `~/.config/gitlint/gitlint`; yamllint's line-length rule is disabled.

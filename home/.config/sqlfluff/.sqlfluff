@@ -1,0 +1,4 @@
+# User-level sqlfluff config (read from ~/.config/sqlfluff when a project has none of its own)
+[sqlfluff]
+dialect = postgres
+max_line_length = 120

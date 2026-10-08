@@ -6,7 +6,7 @@ VERSION=`date +"%Y-%m-%d"`
 # Attach to the tmux session "0", creating it if it doesn't exist.
 # Uses exec rather than attach so bracketed paste works (no more :set paste).
 attach() {
-    exec container exec -it "$NAME" tmux new-session -A -s 0
+    exec docker exec -it "$NAME" tmux new-session -A -s 0
 }
 
 # Already running? Just attach (exec never returns, so nothing below runs).
@@ -23,6 +23,7 @@ docker run \
     -d \
     --name "$NAME" \
     --env-file env \
+    --cap-add=SYS_PTRACE \
     --security-opt seccomp=unconfined \
     --security-opt apparmor=unconfined \
     --security-opt systempaths=unconfined \

@@ -16,7 +16,6 @@ require("config/colorscheme")
 require("config/lint_format") -- nvim-lint + conform, for tools without an LSP
 require("config/lsp")
 require("config/telescope")
-require("config/render_markdown")
 require("config/diagnostic")
 require("config/gitsigns")
 require("config/hlchunk")
@@ -53,11 +52,21 @@ do
         if first > last then
             first, last = last, first
         end
-        vim.api.nvim_buf_set_extmark(buf, ns, first - 1, 0, { end_row = last, end_col = 0, hl_group = "Visual", hl_eol = true })
+        vim.api.nvim_buf_set_extmark(
+            buf,
+            ns,
+            first - 1,
+            0,
+            { end_row = last, end_col = 0, hl_group = "Visual", hl_eol = true }
+        )
     end
     vim.api.nvim_create_autocmd({ "ModeChanged", "CursorMoved" }, {
         callback = function(ev)
-            if ev.event == "ModeChanged" and not vim.v.event.new_mode:match("^V") and not vim.v.event.old_mode:match("^V") then
+            if
+                ev.event == "ModeChanged"
+                and not vim.v.event.new_mode:match("^V")
+                and not vim.v.event.old_mode:match("^V")
+            then
                 return
             end
             update()
@@ -152,17 +161,17 @@ vim.api.nvim_set_hl(0, "LspReferenceRead", { bg = "#ebe5d1" })
 vim.api.nvim_set_hl(0, "LspReferenceWrite", { bg = "#E5E4E2" })
 
 vim.api.nvim_create_autocmd("LspAttach", {
-	callback = function(args)
-		local client = vim.lsp.get_client_by_id(args.data.client_id)
-		if client and client:supports_method("textDocument/documentHighlight") then
-			vim.api.nvim_create_autocmd({ "CursorHold", "CursorHoldI" }, {
-				buffer = args.buf,
-				callback = vim.lsp.buf.document_highlight,
-			})
-			vim.api.nvim_create_autocmd("CursorMoved", {
-				buffer = args.buf,
-				callback = vim.lsp.buf.clear_references,
-			})
-		end
-	end,
+    callback = function(args)
+        local client = vim.lsp.get_client_by_id(args.data.client_id)
+        if client and client:supports_method("textDocument/documentHighlight") then
+            vim.api.nvim_create_autocmd({ "CursorHold", "CursorHoldI" }, {
+                buffer = args.buf,
+                callback = vim.lsp.buf.document_highlight,
+            })
+            vim.api.nvim_create_autocmd("CursorMoved", {
+                buffer = args.buf,
+                callback = vim.lsp.buf.clear_references,
+            })
+        end
+    end,
 })

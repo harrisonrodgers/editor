@@ -7,7 +7,9 @@ vim.o.autocomplete = true
 -- 'autocomplete' is global, so it would also pop a word-completion menu over telescope's prompt as you type
 vim.api.nvim_create_autocmd("FileType", {
     pattern = "TelescopePrompt",
-    callback = function(ev) vim.bo[ev.buf].autocomplete = false end,
+    callback = function(ev)
+        vim.bo[ev.buf].autocomplete = false
+    end,
 })
 vim.o.complete = "o,.^7,w^3,b^3"
 vim.o.completeopt = "menuone,noselect,popup,fuzzy" -- popup: docs next to the item; noselect: nothing is inserted until you pick
@@ -31,7 +33,6 @@ local function truncate(text, max_width)
     end
     return vim.fn.strcharpart(text, 0, chars) .. "…"
 end
-
 
 -- The docs popup next to the completion menu is a plain float that nvim creates itself, and 'pumborder' doesn't reach it,
 -- so give it the same border as the menu whenever the selection changes. It's recognized by being an unfocusable,
@@ -96,10 +97,18 @@ local function complete_or_snippet(direction, pum_key, fallback)
         return snippet_jump(direction) or fallback
     end
 end
-vim.keymap.set({ "i", "s" }, "<Tab>", complete_or_snippet(1, "<C-n>", "<Tab>"),
-    { expr = true, desc = "Next completion item / snippet field" })
-vim.keymap.set({ "i", "s" }, "<S-Tab>", complete_or_snippet(-1, "<C-p>", "<S-Tab>"),
-    { expr = true, desc = "Previous completion item / snippet field" })
+vim.keymap.set(
+    { "i", "s" },
+    "<Tab>",
+    complete_or_snippet(1, "<C-n>", "<Tab>"),
+    { expr = true, desc = "Next completion item / snippet field" }
+)
+vim.keymap.set(
+    { "i", "s" },
+    "<S-Tab>",
+    complete_or_snippet(-1, "<C-p>", "<S-Tab>"),
+    { expr = true, desc = "Previous completion item / snippet field" }
+)
 
 -- <CR> accepts an item you selected (without adding a newline, like nvim-cmp did); with nothing selected it's a newline
 vim.keymap.set("i", "<CR>", function()
@@ -114,7 +123,9 @@ vim.o.wildmode = "noselect:lastused,full"
 vim.o.wildoptions = "pum,fuzzy"
 vim.api.nvim_create_autocmd("CmdlineChanged", {
     pattern = { ":", "/", "?" },
-    callback = function() vim.fn.wildtrigger() end,
+    callback = function()
+        vim.fn.wildtrigger()
+    end,
 })
 
 vim.o.foldlevelstart = 99 -- start with every fold open when a file is opened
@@ -136,8 +147,13 @@ vim.api.nvim_create_autocmd("LspAttach", {
             group = augroup,
             buffer = bufnr,
             callback = function()
-                local function formats(c) return c.name ~= "lua_ls" end
-                if #vim.tbl_filter(formats, vim.lsp.get_clients({ bufnr = bufnr, method = "textDocument/formatting" })) > 0 then
+                local function formats(c)
+                    return c.name ~= "lua_ls"
+                end
+                if
+                    #vim.tbl_filter(formats, vim.lsp.get_clients({ bufnr = bufnr, method = "textDocument/formatting" }))
+                    > 0
+                then
                     -- Sync causes less issues, and ruff is ultra fast
                     vim.lsp.buf.format({ async = false, bufnr = bufnr, filter = formats })
                 end
@@ -198,7 +214,9 @@ vim.api.nvim_create_autocmd("LspAttach", {
         vim.keymap.set("n", "gD", vim.lsp.buf.declaration, bufopts)
         vim.keymap.set("n", "<space>wa", vim.lsp.buf.add_workspace_folder, bufopts)
         vim.keymap.set("n", "<space>wr", vim.lsp.buf.remove_workspace_folder, bufopts)
-        vim.keymap.set("n", "<space>wl", function() print(vim.inspect(vim.lsp.buf.list_workspace_folders())) end, bufopts)
+        vim.keymap.set("n", "<space>wl", function()
+            print(vim.inspect(vim.lsp.buf.list_workspace_folders()))
+        end, bufopts)
 
         -- Code structure queries, each only where this server supports it. Under the gr prefix, next to the defaults
         -- (gra, gri, grn, grr, grt, grx): grs workspace symbols, grc/grC callers/callees, grh/grH subtypes/supertypes
@@ -208,7 +226,9 @@ vim.api.nvim_create_autocmd("LspAttach", {
         -- Telescope pickers for the LSP lookups, instead of nvim's quickfix list / direct jump. These shadow the default gr*
         -- mappings and gO in buffers where a server supports the request, so other buffers keep the defaults.
         local function pick(name)
-            return function() require("telescope.builtin")[name]() end
+            return function()
+                require("telescope.builtin")[name]()
+            end
         end
         if client and client:supports_method("textDocument/definition") then
             map("gd", pick("lsp_definitions"), "Definitions")
@@ -234,13 +254,15 @@ vim.api.nvim_create_autocmd("LspAttach", {
             map("grC", pick("lsp_outgoing_calls"), "Callees of the symbol under the cursor")
         end
         if client and client:supports_method("textDocument/prepareTypeHierarchy") then
-            map("grh", function() vim.lsp.buf.typehierarchy("subtypes") end, "Subtypes (classes inheriting from this)")
-            map("grH", function() vim.lsp.buf.typehierarchy("supertypes") end, "Supertypes (classes this inherits from)")
+            map("grh", function()
+                vim.lsp.buf.typehierarchy("subtypes")
+            end, "Subtypes (classes inheriting from this)")
+            map("grH", function()
+                vim.lsp.buf.typehierarchy("supertypes")
+            end, "Supertypes (classes this inherits from)")
         end
     end,
 })
-
-
 
 -- Ruff defaults to UTF-8 while many servers (and previously pyright) use UTF-16; make ruff use UTF-16 so they agree (avoids column drift on non-ASCII)
 vim.lsp.config("ruff", {
@@ -262,6 +284,12 @@ vim.lsp.config("ruff", {
 -- Personal word list for typos (home/.config/typos/typos.toml); a project's own .typos.toml is merged on top of it
 vim.lsp.config("typos_lsp", {
     init_options = { config = vim.fn.expand("~/.config/typos/typos.toml") },
+})
+
+-- Give lua_ls the nvim runtime so it knows the vim.* API (completion, types) when editing the nvim config.
+-- (runtime version and the `vim` global are set in home/.config/nvim/.luarc.jsonc)
+vim.lsp.config("lua_ls", {
+    settings = { Lua = { workspace = { library = { vim.env.VIMRUNTIME } } } },
 })
 
 -- Default cmd/filetypes/root_markers come from nvim-lspconfig's lsp/*.lua

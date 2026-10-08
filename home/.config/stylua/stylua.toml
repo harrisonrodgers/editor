@@ -1,0 +1,4 @@
+# Global stylua config (found when a project has no stylua.toml of its own), used by `stylua` and nvim's conform
+indent_type = "Spaces"
+indent_width = 4
+column_width = 120

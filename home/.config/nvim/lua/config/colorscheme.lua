@@ -5,24 +5,25 @@ vim.cmd([[colorscheme selenized]])
 -- Lighten the theme's bg_1 (used for the cursor line, popup menu, etc.). The theme builds its palette internally, so
 -- swap the color in every highlight group that uses it, and in the palette table other config files read from.
 do
-	local c = _G.selenized.colors
-	local old_bg_1 = tonumber(c.bg_1:sub(2), 16)
-	c.bg_1 = "#f2ecd6" -- theme default for light is #e9e4d0
-	local new_bg_1 = tonumber(c.bg_1:sub(2), 16)
-	for name, hl in pairs(vim.api.nvim_get_hl(0, {})) do
-		if not hl.link then
-			local changed = false
-			for _, key in ipairs({ "fg", "bg", "sp" }) do
-				if hl[key] == old_bg_1 then
-					hl[key] = new_bg_1
-					changed = true
-				end
-			end
-			if changed then
-				vim.api.nvim_set_hl(0, name, hl)
-			end
-		end
-	end
+    ---@diagnostic disable-next-line: undefined-field -- _G.selenized is set by the selenized.nvim theme at runtime
+    local c = _G.selenized.colors
+    local old_bg_1 = tonumber(c.bg_1:sub(2), 16)
+    c.bg_1 = "#f2ecd6" -- theme default for light is #e9e4d0
+    local new_bg_1 = tonumber(c.bg_1:sub(2), 16)
+    for name, hl in pairs(vim.api.nvim_get_hl(0, {})) do
+        if not hl.link then
+            local changed = false
+            for _, key in ipairs({ "fg", "bg", "sp" }) do
+                if hl[key] == old_bg_1 then
+                    hl[key] = new_bg_1
+                    changed = true
+                end
+            end
+            if changed then
+                vim.api.nvim_set_hl(0, name, hl)
+            end
+        end
+    end
 end
 
 -- Ensure comments are always italic
@@ -34,6 +35,7 @@ vim.cmd([[highlight Comment gui=italic]])
 -- Bold the line number of the cursor line (`highlight` only changes gui, so the theme's colors are kept)
 vim.cmd([[highlight CursorLineNr gui=bold]])
 
+---@diagnostic disable-next-line: undefined-field -- _G.selenized is set by the selenized.nvim theme at runtime
 local c = _G.selenized.colors -- the theme's palette (with bg_1 lightened above), used by the groups below
 
 -- Border of floating windows (diagnostics, hover, ...): the theme's bg_1-colored border is almost invisible against the
@@ -51,15 +53,33 @@ vim.api.nvim_set_hl(0, "LspInlayHint", { fg = require("config/tint")(c.dim_0, c.
 
 -- Completion menu: color of the "kind" column per LSP completion item kind (see completion_convert in lsp.lua)
 local kind_colors = {
-	Function = c.blue, Method = c.blue, Constructor = c.blue,
-	Class = c.yellow, Interface = c.yellow, Struct = c.yellow, Enum = c.yellow, TypeParameter = c.yellow,
-	Variable = c.cyan, Field = c.cyan, Property = c.cyan,
-	Constant = c.orange, Value = c.orange, EnumMember = c.orange, Unit = c.orange,
-	Module = c.violet, File = c.violet, Folder = c.violet, Reference = c.violet,
-	Keyword = c.magenta, Operator = c.magenta,
-	Snippet = c.green,
-	Text = c.dim_0, Color = c.dim_0, Event = c.dim_0, Unknown = c.dim_0,
+    Function = c.blue,
+    Method = c.blue,
+    Constructor = c.blue,
+    Class = c.yellow,
+    Interface = c.yellow,
+    Struct = c.yellow,
+    Enum = c.yellow,
+    TypeParameter = c.yellow,
+    Variable = c.cyan,
+    Field = c.cyan,
+    Property = c.cyan,
+    Constant = c.orange,
+    Value = c.orange,
+    EnumMember = c.orange,
+    Unit = c.orange,
+    Module = c.violet,
+    File = c.violet,
+    Folder = c.violet,
+    Reference = c.violet,
+    Keyword = c.magenta,
+    Operator = c.magenta,
+    Snippet = c.green,
+    Text = c.dim_0,
+    Color = c.dim_0,
+    Event = c.dim_0,
+    Unknown = c.dim_0,
 }
 for kind, color in pairs(kind_colors) do
-	vim.api.nvim_set_hl(0, "CompletionKind" .. kind, { fg = color })
+    vim.api.nvim_set_hl(0, "CompletionKind" .. kind, { fg = color })
 end

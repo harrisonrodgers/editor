@@ -23,6 +23,7 @@ container run \
     -d \
     --name "$NAME" \
     --env-file env \
+    --cap-add CAP_SYS_PTRACE \
     -v $PWD:/host \
     ${NAME}:${VERSION} \
     bash -lc '

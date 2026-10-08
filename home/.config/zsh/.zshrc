@@ -96,7 +96,7 @@ bindkey -e                  # Enable emacs mode (should be default) to permit Co
 bindkey "\e[3~" delete-char # Bind delete key to delete-char function as some terminals do not map it correctly by default
 
 # Muscle Memory
-#alias vim='nvim'
+alias vim='nvim'
 alias ls='eza --git --binary'
 alias cat='bat'
 

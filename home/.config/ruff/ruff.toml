@@ -1,0 +1,2 @@
+# User-level ruff config: only used in repos without their own ruff config (pyproject.toml / ruff.toml)
+line-length = 120

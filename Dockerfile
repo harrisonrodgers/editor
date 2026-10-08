@@ -73,21 +73,24 @@ RUN curl -fsSL https://nixos.org/nix/install | sh -s -- --no-daemon
 
 ## PACKAGES ############################################################################################################
 RUN nix profile add --impure \
-# shell & prompt
+# shell & terminal
+        # shell & prompt
         nixpkgs#zsh \
         nixpkgs#zsh-fzf-tab \
         nixpkgs#zsh-syntax-highlighting \
         nixpkgs#starship \
         # nixpkgs#zsh-powerlevel10k # consider, faster, though zsh only
-# terminal multiplexer
+        # terminal multiplexer
         nixpkgs#tmux \
-# editors (nano as a fallback; neovim is installed below, wrapped with nvim-treesitter)
+# editors
+        # nano as a fallback; neovim is installed below, wrapped with nvim-treesitter
         nixpkgs#nano \
-# compiler, used by nvim to build tree-sitter parsers
+        # compiler, used by nvim to build tree-sitter parsers
         nixpkgs#gcc \
-# tree-sitter CLI, required by nvim-treesitter (:checkhealth) to build/install parsers
+        # tree-sitter CLI, required by nvim-treesitter (:checkhealth) to build/install parsers
         nixpkgs#tree-sitter \
-# core cli
+# cli utilities
+        # core cli
         nixpkgs#git \
         nixpkgs#less \
         nixpkgs#gawk \
@@ -97,42 +100,23 @@ RUN nix profile add --impure \
         nixpkgs#gnutar \
         nixpkgs#zip \
         nixpkgs#unzip \
-# per-directory env vars (.envrc)
-        nixpkgs#direnv \
-# smarter cd that learns your most used directories
-        nixpkgs#zoxide \
-# fuzzy finder
-        nixpkgs#fzf \
-# modern replacements: grep, find, cat, ls
+        # modern replacements: grep, find, cat, ls
         nixpkgs#ripgrep \
         # nixpkgs#ripgrep-all \
         nixpkgs#fd \
         nixpkgs#bat \
         nixpkgs#eza \
-# bulk rename files in your editor (qmv, imv)
+        # fuzzy finder
+        nixpkgs#fzf \
+        # smarter cd that learns your most used directories
+        nixpkgs#zoxide \
+        # per-directory env vars (.envrc)
+        nixpkgs#direnv \
+        # bulk rename files in your editor (qmv, imv)
         nixpkgs#renameutils \
-# determine types of files
+        # determine types of files
         nixpkgs#file \
-# system inspection: processes, open files, network (netstat, ifconfig)
-        nixpkgs#htop \
-        nixpkgs#lsof \
-        nixpkgs#net-tools \
-# log file viewer
-        nixpkgs#lnav \
-# simple statistics (mean, stddev, ...) from numbers on stdin
-        nixpkgs#sta \
-# containers & kubernetes
-        nixpkgs#docker \
-        nixpkgs#kubectl \
-        nixpkgs#kustomize \
-# NOTE: may want to skip as these take time to build and are likely not needed
-        # nixpkgs#nomad \
-        # nixpkgs#terraform \
-# python: env manager (envs live in $MAMBA_ROOT_PREFIX) and fast pip/venv replacement
-        nixpkgs#micromamba \
-        nixpkgs#uv \
-        # nixpkgs#python310Full \  # using micromamba envs instead
-# reference / man pages (using apt's manpages instead as that will cover the non-nix stuff also)
+        # reference / man pages (using apt's manpages instead as that will cover the non-nix stuff also)
         # nixpkgs#man \
         # nixpkgs#manpages \
         # nixpkgs#stdman \
@@ -140,74 +124,112 @@ RUN nix profile add --impure \
         # nixpkgs#clang-manpages \
         # nixpkgs#man-pages \
         # nixpkgs#posix_man_pages \
-# claude code sandbox dependencies
-        nixpkgs#bubblewrap \
-        nixpkgs#socat \
-# binary cache client (used at container start: `cachix use claude-code`)
-        nixpkgs#cachix \
-# init process (PID 1, see ENTRYPOINT below): reaps zombie processes and forwards signals so `stop` is immediate
-        nixpkgs#tini \
-# language servers (for neovim)
+# data & documents
+        # structured data: query json, turn command output into json, make json greppable, query yaml
+        nixpkgs#jq \
+        nixpkgs#jc \
+        nixpkgs#gron \
+        nixpkgs#yq-go \
+        # convert hcl2 (nomad, terraform) to json so it's easier for claude to read
+        nixpkgs#hcl2json \
+        # simple statistics (mean, stddev, ...) from numbers on stdin
+        nixpkgs#sta \
+        # convert between markup formats (markdown, html, docx, ...)
+        nixpkgs#pandoc \
+        # nixpkgs#plantuml \  # TODO: uncomment later, for now avoid as it needs building on arm
+# code search, diffs & stats
+        # search and rewrite code using its ast
+        nixpkgs#ast-grep \
+        # diff viewers: pager for git output, and structural diff that understands syntax
+        nixpkgs#delta \
+        nixpkgs#difftastic \
+        # count lines of code
+        nixpkgs#tokei \
+        nixpkgs#cloc \
+# language servers, linters & formatters
+        # language servers (for neovim)
         nixpkgs#ty \
         nixpkgs#bash-language-server \
         nixpkgs#yaml-language-server \
         nixpkgs#vim-language-server \
         nixpkgs#dockerfile-language-server \
+        nixpkgs#lua-language-server \
         # html, css, json, eslint
         nixpkgs#vscode-langservers-extracted \
         # nixpkgs#nodePackages.neovim \
-# python: lint/format, and find unused functions/variables/...
+        # python: lint/format, and find unused functions/variables/...
         nixpkgs#ruff \
         nixpkgs#python314Packages.vulture \
-        # latex2text: lets render-markdown.nvim render LaTeX math in markdown
-        nixpkgs#python314Packages.pylatexenc \
-# shell: lint and format
+        # shell: lint and format
         nixpkgs#shellcheck \
         nixpkgs#shfmt \
-# lua: format and lint
+        # lua: format
         nixpkgs#stylua \
-        nixpkgs#lua-language-server \
-# yaml, markdown, ansible
+        # yaml, markdown, ansible
         nixpkgs#yamllint \
         nixpkgs#markdownlint-cli2 \
         nixpkgs#ansible-lint \
-# sql: lint and auto-format
+        # sql: lint and auto-format
         nixpkgs#sqlfluff \
-# dockerfiles
+        # dockerfiles
         nixpkgs#hadolint \
-# terraform .tf files
+        # terraform .tf files
         nixpkgs#tflint \
-# .proto files: lint and check for breaking changes
+        # .proto files: lint and check for breaking changes
         nixpkgs#buf \
-# xml: xmllint
+        # xml: xmllint
         nixpkgs#libxml2 \
-# git commit message lint
+        # git commit message lint
         nixpkgs#gitlint \
-# spelling mistakes in code https://github.com/crate-ci/typos/blob/main/docs/comparison.md
+        # spelling mistakes in code https://github.com/crate-ci/typos/blob/main/docs/comparison.md
         nixpkgs#typos \
         nixpkgs#typos-lsp \
-# broken link checker (markdown, html, ...)
+        # broken link checker (markdown, html, ...)
         nixpkgs#lychee \
-# report on credential leaks: gitleaks git -v
+        # report on credential leaks: gitleaks git -v
         nixpkgs#gitleaks \
-# structured data: query json, turn command output into json, make json greppable, query yaml
-        nixpkgs#jq \
-        nixpkgs#jc \
-        nixpkgs#gron \
-        nixpkgs#yq-go \
-# convert hcl2 (nomad, terraform) to json so it's easier for claude to read
-        nixpkgs#hcl2json \
-        # nixpkgs#plantuml \  # TODO: uncomment later, for now avoid as it needs building on arm
-# search and rewrite code using its ast
-        nixpkgs#ast-grep \
-# diff viewers: pager for git output, and structural diff that understands syntax
-        nixpkgs#delta \
-        nixpkgs#difftastic \
-# count lines of code
-        nixpkgs#tokei \
-        nixpkgs#cloc \
-# benchmark commands against each other
+# debugging, profiling & monitoring
+        # system inspection: processes, open files, network (netstat, ifconfig)
+        nixpkgs#htop \
+        nixpkgs#lsof \
+        nixpkgs#net-tools \
+        # log file viewer
+        nixpkgs#lnav \
+        # python sampling profiler, syscall tracer, debugger
+        nixpkgs#py-spy \
+        nixpkgs#strace \
+        nixpkgs#gdb \
+        # benchmark commands against each other
         nixpkgs#hyperfine \
+        # network clients: websockets, grpc, dns (dig, nslookup)
+        nixpkgs#websocat \
+        nixpkgs#grpcurl \
+        nixpkgs#bind \
+        # promtool (check prometheus rules/configs, query a server)
+        nixpkgs#prometheus.cli \
+# containers & infrastructure
+        # containers & kubernetes
+        nixpkgs#docker \
+        nixpkgs#kubectl \
+        nixpkgs#kustomize \
+        # explore docker image layers and find wasted space
+        nixpkgs#dive \
+        # NOTE: may want to skip as these take time to build and are likely not needed
+        # nixpkgs#nomad \
+        # nixpkgs#terraform \
+# python
+        # env manager (envs live in $MAMBA_ROOT_PREFIX) and fast pip/venv replacement
+        nixpkgs#micromamba \
+        nixpkgs#uv \
+        # nixpkgs#python310Full \  # using micromamba envs instead
+# container runtime & claude code
+        # claude code sandbox dependencies
+        nixpkgs#bubblewrap \
+        nixpkgs#socat \
+        # binary cache client (used at container start: `cachix use claude-code`)
+        nixpkgs#cachix \
+        # init process (PID 1, see ENTRYPOINT below): reaps zombie processes and forwards signals so `stop` is immediate
+        nixpkgs#tini \
 # cleanup (only shrinks the image if chained onto the same RUN as the installs)
     && nix store gc \
     && nix store optimise \
@@ -232,6 +254,7 @@ RUN sudo mandb --create
 
 ## CONFIG FILES ########################################################################################################
 COPY --chown=${UID}:${GID} ["home", "${HOME}/"]
+COPY --chown=${UID}:${GID} ["sandbox/conda", "/sandbox/${USER}/conda"]
 
 ## BAT THEME ###########################################################################################################
 # register the custom selenized-light theme from home/.config/bat/themes
@@ -265,8 +288,6 @@ ENV MAMBA_ROOT_PREFIX="/sandbox/${USER}/conda" \
 RUN mkdir -p "${HOME}/.cache/mamba/proc" \
     && mkdir -p "${CONDA_ENVS_PATH}" \
     && mkdir -p "${CONDA_PKGS_DIRS}"
-
-COPY --chown=${UID}:${GID} [".condarc", "${MAMBA_ROOT_PREFIX}/.condarc"]
 
 ## UV #################################################################################################################
 

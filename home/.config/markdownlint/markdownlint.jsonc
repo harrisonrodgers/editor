@@ -1,0 +1,7 @@
+// User-level markdownlint config, passed to markdownlint-cli2 with --config (see lua/config/lint_format.lua) as the base;
+// a project's own .markdownlint-cli2.jsonc / .markdownlint.jsonc is applied on top of it.
+{
+    "MD013": {
+        "line_length": 120
+    }
+}
