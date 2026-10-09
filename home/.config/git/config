@@ -1,8 +1,33 @@
+# --- Commits and signing ---
 [commit]
     gpgSign = true
+    verbose = true  # Show the diff of what is being committed below the message in the editor
 [tag]
     gpgSign = true
+    sort = version:refname  # v1.10 sorts after v1.9
 
+# --- Repository and remote workflow ---
+[init]
+    defaultBranch = master
+[fetch]
+    prune = true  # Remove remote-tracking branches that no longer exist upstream
+    pruneTags = true  # Likewise for local tags deleted upstream
+[pull]
+    rebase = true
+[push]
+    autoSetupRemote = true  # `git push` on a new branch sets the upstream automatically
+[rebase]
+    autoStash = true
+    abbreviateCommands = true  # `git rebase -i` todo list uses `p` instead of `pick`, so changing to f/s/r is one keystroke
+    missingCommitsCheck = error  # Refuse to rebase if a line was accidentally deleted from the todo list
+[rerere]
+    enabled = true  # Remember how conflicts were resolved and reapply them
+[credential]
+    helper = cache --timeout=157680000  # Cache username + password
+[help]
+    autocorrect = prompt
+
+# --- Aliases ---
 [alias]
     s = status
     c = checkout
@@ -10,66 +35,45 @@
     ddiff = -c diff.external=difft diff
     dlog = -c diff.external=difft log --ext-diff
     dshow = -c diff.external=difft show --ext-diff
+    ndiff = difftool --dir-diff
 
-[init]
-    defaultBranch = master
-[fetch]
-    # Remove remote-tracking branches that no longer exist upstream
-    prune = true
-[pull]
-    rebase = True
-[push]
-    # `git push` on a new branch sets the upstream automatically
-    autoSetupRemote = true
-[rebase]
-    autoStash = true
-[rerere]
-    # Remember how conflicts were resolved and reapply them
-    enabled = true
-
+# --- Output: log format and pager ---
 [log]
     decorate = true
+[branch]
+    sort = -committerdate  # `git branch` lists most recently used first
+[column]
+    ui = auto  # `git branch` and `git tag` output in columns
+[status]
+    showUntrackedFiles = all  # List files inside untracked directories, not just the directory
 [format]
     pretty = custom
 [pretty]
-    custom = format:%C(auto)%H%d%Creset%nAuthor: %Cgreen%ad%Creset %aN <%aE> %Cgreen%ar%Creset%n%C(always,dim)Commit: %cd %cN <%cE> %cr%Creset %G? %GK %GS%n%C(always,bold)%s%Creset%n
-
+    custom = format:%C(auto)%H%d%Creset%nAuthor: %Cgreen%ad%Creset %aN <%aE> %Cgreen%ar%Creset%n%C(dim)Commit: %cd %cN <%cE> %cr%Creset%n%C(bold)%s%Creset%n
 [core]
     pager = delta
 [interactive]
     diffFilter = delta --color-only
 [delta]
-    # use n/N to jump between files in the pager
-    navigate = true
+    navigate = true  # use n/N to jump between files in the pager
     line-numbers = true
     light = true
 
+# --- Diff and merge ---
 [diff]
     algorithm = histogram
     colorMoved = default
-    tool = vimdiff3
-[difftool "difftastic"]
-    cmd = difft "$LOCAL" "$REMOTE"
-[difftool "vimdiff3"]
-    path = nvim
-[difftool]
-    # Do not ask yes/no before launching
-    prompt = false
-    # Be able to abort by exiting vim with a non-zero exit code (`:cq` or `:cquit`).
-    trustExitCode = true
-
+    mnemonicPrefix = true  # a/ b/ become i/ w/ c/ (index, worktree, commit) to show what is being compared
+    renames = copies  # Detect copied files as well as renamed ones
+    tool = nvimdiff
 [merge]
     conflictStyle = zdiff3
-    # Do not ask yes/no before launching
-    tool = vimdiff3
-[mergetool "vimdiff3"]
-    path = nvim
-[mergetool]
-    # Do not ask yes/no before launching
-    prompt = false
-    # Be able to abort by exiting vim with a non-zero exit code (`:cq` or `:cquit`).
-    trustExitCode = true
+    tool = nvimdiff3
 
-# Cache username + password for 5 years to avoid having to type username + password
-[credential]
-    helper = cache --timeout=157680000
+# --- Diff and merge tools ---
+[difftool]
+    prompt = false  # Do not ask yes/no before launching
+    trustExitCode = true  # Be able to abort by exiting vim with a non-zero exit code (`:cq` or `:cquit`).
+[mergetool]
+    prompt = false  # Do not ask yes/no before launching
+    trustExitCode = true  # Be able to abort by exiting vim with a non-zero exit code (`:cq` or `:cquit`).

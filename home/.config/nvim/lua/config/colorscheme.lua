@@ -46,6 +46,9 @@ vim.api.nvim_set_hl(0, "FloatBorder", { fg = c.dim_0, bg = c.bg_0 })
 -- inherit from Pmenu; the selected item keeps the theme's PmenuSel background.
 vim.api.nvim_set_hl(0, "Pmenu", { fg = c.dim_0, bg = c.bg_0 })
 
+-- Visual-mode selection: using a yellow highlighter color.
+vim.api.nvim_set_hl(0, "Visual", { bg = require("config/tint")("#ffe066", c.bg_0, 0.7) })
+
 -- Inlay hints: the theme leaves them unstyled (so they look like normal code). Make them a faint version of the comment
 -- color, blended toward the background; raise the 0.5 for more contrast, lower it to fade them further.
 -- (bg_0 itself would be invisible: it is the editor background.)

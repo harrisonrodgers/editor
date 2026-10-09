@@ -154,6 +154,7 @@ RUN nix profile add --impure \
         nixpkgs#vim-language-server \
         nixpkgs#dockerfile-language-server \
         nixpkgs#lua-language-server \
+        nixpkgs#jinja-lsp \
         # html, css, json, eslint
         nixpkgs#vscode-langservers-extracted \
         # nixpkgs#nodePackages.neovim \
@@ -169,6 +170,10 @@ RUN nix profile add --impure \
         nixpkgs#yamllint \
         nixpkgs#markdownlint-cli2 \
         nixpkgs#ansible-lint \
+        # jinja2 templates: djlint (lint + format, HTML templates), j2lint (lint), jinja2-cli (render a template)
+        nixpkgs#djlint \
+        nixpkgs#j2lint \
+        nixpkgs#jinja2-cli \
         # sql: lint and auto-format
         nixpkgs#sqlfluff \
         # dockerfiles
