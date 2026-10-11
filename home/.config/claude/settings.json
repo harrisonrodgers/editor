@@ -1,6 +1,7 @@
 {
     "model": "opus",
     "theme": "light",
+    "tui": "fullscreen",
     "spinnerTipsEnabled": false,
     "spinnerVerbs": {
         "mode": "replace",

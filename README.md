@@ -103,10 +103,10 @@ for its clipboard (`tmux refresh-client -l`), which many terminals block or ask 
 `home/.config/claude`:
 
 - `.claude.json`: skips onboarding.
-- `settings.json`: the `opus` model, light theme, a quiet spinner (no tips, just "Processing"), no away summary or turn
-  duration, no automatic model switch when safeguards flag a message, Ctrl+G's external editor starts with the last
-  response, no attribution or session link in commits and PRs, no error reporting or telemetry, and the sandboxed
-  shell may also read and write `/sandbox/${USER}/{conda,uv,repos}` and `~/.cache`.
+- `settings.json`: the `opus` model, light theme, the fullscreen TUI, a quiet spinner (no tips, just "Processing"), no
+  away summary or turn duration, no automatic model switch when safeguards flag a message, Ctrl+G's external editor
+  starts with the last response, no attribution or session link in commits and PRs, no error reporting or telemetry,
+  and the sandboxed shell may also read and write `/sandbox/${USER}/{conda,uv,repos}` and `~/.cache`.
 - `CLAUDE.md`: which CLI tools are installed, that `python3` isn't on PATH (use the active micromamba env's `python`,
   else `uv run python`), and that git merges go through mergiraf.
 

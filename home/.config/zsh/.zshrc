@@ -138,9 +138,28 @@ sqruff() {
     fi
 }
 
-# Micromamba
-,m() {
-    micromamba "$@"
+# git: ask y/N before `git commit` on master/main, or `git push` to master/main (where a refspec such as `main` or
+# `HEAD:main` points, else the current branch). Skip it with `command git`.
+git() {
+    if [[ $1 == (commit|push) ]]
+    then
+        local branch="$(command git symbolic-ref --short -q HEAD)" ref target
+        local -a refspecs=(${${@:2}:#-*})  # remote, then refspecs
+        refspecs=("${refspecs[@]:1}")
+        [[ $1 == commit || ${#refspecs} == 0 ]] && refspecs=(HEAD)
+        for ref in "${refspecs[@]}"
+        do
+            ref="${${${ref#+}##*:}#refs/heads/}"  # destination: after the last ':', without refs/heads/
+            [[ $ref == HEAD ]] && ref=$branch
+            [[ $ref == (master|main) ]] && target=$ref
+        done
+        if [[ -n $target ]]
+        then
+            read -q "?Git $1 on '$target'? [y/N] " || { print; return 1 }
+            print
+        fi
+    fi
+    command git "$@"
 }
 
 # Repo: cd to /sandbox/${USER}/repos/<repo>, or to the repos dir itself with no args
@@ -164,6 +183,11 @@ _comma_r() {
     compadd -a repos
 }
 compdef _comma_r ,r
+
+# Conda
+,c() {
+    micromamba "$@"
+}
 
 # Conda: Activate
 ,ca() {
@@ -220,6 +244,12 @@ zstyle ':completion:*:descriptions' format '[%d]'
 # do not sort git checkout or commit
 zstyle ":completion:*:git-checkout:*" sort false
 zstyle ":completion:*:git-commit:*" sort false
+# list local branch names newest-commit first, and keep that order in the completion menu
+zstyle ':completion:*:branchrefs' command "git for-each-ref --sort=-committerdate --format='%(refname)' refs/heads"
+zstyle ':completion:*:git-switch:*' sort false
+# git checkout lists heads via the 'headrefs' tag (shared by local and remote heads), so append a sort instead of replacing it
+_git_refs_newest_first() { "$@" --sort=-committerdate }
+zstyle ':completion:*:headrefs' command -_git_refs_newest_first
 zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
 # fzf-tab's defaults are bright colors meant for dark terminals; use the selenized light palette instead (truecolor).
 # Plain candidates get fg_0. Group headers/candidates are colored by group number (1st group gets the 1st color, ...) and
@@ -241,6 +271,9 @@ zstyle ':fzf-tab:*' default-color $'\033[0;38;2;83;103;109m'
 # fzf-tab clears FZF_DEFAULT_OPTS by default, which drops the selenized --color settings above (the selected row and
 # gutter then fall back to fzf's own, dark-looking colors); its own --height/--layout flags still win over ours
 zstyle ':fzf-tab:*' use-fzf-default-opts yes
+# NO_CASE_GLOB lets completion insert a capital from a match (`pre` -> `preD` with PRED-* and prediction_* dirs);
+# fzf's smart case would then match case-sensitively and show nothing, so ignore case like the completion does
+zstyle ':fzf-tab:*' fzf-flags -i
 # give a preview of directory by eza when completing cd
 zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza -1 --color=always $realpath'
 
