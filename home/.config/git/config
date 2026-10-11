@@ -1,9 +1,7 @@
 # --- Commits and signing ---
 [commit]
-    gpgSign = true
     verbose = true  # Show the diff of what is being committed below the message in the editor
 [tag]
-    gpgSign = true
     sort = version:refname  # v1.10 sorts after v1.9
 
 # --- Repository and remote workflow ---
@@ -69,6 +67,13 @@
 [merge]
     conflictStyle = zdiff3
     tool = nvimdiff3
+# mergiraf: syntax-aware merge driver (resolves conflicts that only look like conflicts line by line, e.g. both
+# sides adding a different import or json key). Used for every file via ~/.config/git/attributes (`* merge=mergiraf`);
+# files it can't parse fall back to git's line-based merge. `mergiraf solve <file>` resolves markers already in a file,
+# `mergiraf review <id>` shows what it changed (it prints the id during the merge).
+[merge "mergiraf"]
+    name = mergiraf
+    driver = mergiraf merge --git %O %A %B -s %S -x %X -y %Y -p %P -l %L
 
 # --- Diff and merge tools ---
 [difftool]

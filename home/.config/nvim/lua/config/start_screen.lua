@@ -1,15 +1,16 @@
--- Custom start screen, shown when nvim is started without a file: a cheat sheet of the keys this setup uses, LSP first,
--- then diagnostics, then telescope. It is plain text, so keep it in sync by hand when the keys change
--- (lsp.lua, diagnostic.lua; the telescope in-picker keys are telescope's own defaults).
+-- Custom start screen, shown when nvim is started without a file: a cheat sheet of the keys this setup uses, LSP first
+-- (keys, then the built-in :lsp commands), then diagnostics, git, telescope, the clipboard and saving. It is plain text,
+-- so keep it in sync by hand when the keys change (lsp.lua, diagnostic.lua, gitsigns.lua, lint_format.lua; the telescope
+-- in-picker keys are telescope's own defaults, the clipboard keys nvim's).
 
--- The descriptions are at most 42 characters: two columns have to fit in 120 terminal columns.
+-- Related keys share a row ("]h, [h" with "next / previous hunk"). The descriptions are at most 41 characters: two
+-- columns have to fit in 120 terminal columns.
 local sections = {
     {
         title = "LSP",
         note = "in a buffer with a language server attached",
         items = {
-            { "gd", "definition" },
-            { "gD", "declaration" },
+            { "gd, gD", "definition / declaration" },
             { "grr", "references" },
             { "gri", "implementation" },
             { "grt", "type definition" },
@@ -18,27 +19,43 @@ local sections = {
             { "grx", "run the code lens on this line" },
             { "gO", "symbols in this file" },
             { "grs", "symbols in the whole project" },
-            { "grc", "callers of the symbol" },
-            { "grC", "callees of the symbol" },
-            { "grh", "subtypes: classes inheriting from this" },
-            { "grH", "supertypes: classes this one inherits from" },
+            { "grc, grC", "callers / callees of the symbol" },
+            { "grh, grH", "subtypes / supertypes (inheritance)" },
             { "K", "hover docs" },
             { "<C-s>", "signature help (insert mode)" },
-            { "<space>wa", "add a workspace folder" },
-            { "<space>wr", "remove a workspace folder" },
+            { "<C-l>", "accept inline completion (insert mode)" },
+            { "<space>wa, wr", "add / remove a workspace folder" },
             { "<space>wl", "list workspace folders" },
+        },
+    },
+    {
+        title = "LSP commands",
+        note = "followed by a server name (tab-completes), e.g. :lsp stop harper_ls",
+        items = {
+            { ":lsp stop", "stop it; back on :e or the next file" },
+            { ":lsp restart", "restart it (no name: all in this buffer)" },
+            { ":lsp enable", "turn it back on (:e for open files)" },
+            { ":lsp disable", "stop it and keep it off for new files" },
         },
     },
     {
         title = "Diagnostics",
         items = {
-            { "]d", "next diagnostic" },
-            { "[d", "previous diagnostic" },
-            { "]D", "last diagnostic in the buffer" },
-            { "[D", "first diagnostic in the buffer" },
+            { "]d, [d", "next / previous diagnostic" },
             { "<C-w>d", "float with the diagnostics at the cursor" },
             { "<C-w>D", "diagnostics of this buffer" },
             { "<space>Q", "diagnostics of all open buffers" },
+        },
+    },
+    {
+        title = "Git",
+        note = "in a file tracked by git (gitsigns)",
+        items = {
+            { "]h, [h", "next / previous hunk" },
+            { "<space>hp", "preview the hunk (diff in a float)" },
+            { "<space>hs, hr", "stage / reset the hunk (visual: lines)" },
+            { "<space>hd", "diff the file against the index" },
+            { "gb", "blame the line (full commit message)" },
         },
     },
     {
@@ -54,22 +71,35 @@ local sections = {
     {
         title = "In a telescope picker",
         items = {
-            { "<C-n> <C-p>", "move down / up (or the arrow keys)" },
+            { "<C-n>, <C-p>", "move down / up (or the arrow keys)" },
             { "<CR>", "open the selection" },
-            { "<C-x>", "open in a horizontal split" },
-            { "<C-v>", "open in a vertical split" },
+            { "<C-x>, <C-v>", "open in a split / vertical split" },
             { "<C-t>", "open in a new tab" },
             { "<Tab>", "mark / unmark the entry" },
-            { "<C-q>", "send all entries to the quickfix list" },
-            { "<M-q>", "send marked entries to the quickfix list" },
-            { "<C-u> <C-d>", "scroll the preview up / down" },
+            { "<C-q>, <M-q>", "all / marked entries to the quickfix list" },
+            { "<C-u>, <C-d>", "scroll the preview up / down" },
             { "<C-/>", "show every key of the picker" },
             { "<C-c>", "close" },
         },
     },
+    {
+        title = "Clipboard",
+        note = "the host OS clipboard, through tmux (OSC 52)",
+        items = {
+            { '"+y', 'yank to the OS clipboard ("+yy a line)' },
+            { "gx", "copy the URL under the cursor" },
+        },
+    },
+    {
+        title = "Saving",
+        items = {
+            { ":noa w", "save without formatting (skips autocmds)" },
+            { ":cq", "quit with an error: aborts a git commit" },
+        },
+    },
 }
 
-local KEY_WIDTH = 12 -- room for the longest key, "<C-n> <C-p>"
+local KEY_WIDTH = 15 -- room for the longest keys, "<space>hs, hr" and "<space>wa, wr", plus two spaces
 local COLUMN_WIDTH = 60 -- one column: indent + key + description
 
 local function render()
@@ -79,6 +109,7 @@ local function render()
         return #lines - 1
     end
     -- same as the first line of `nvim --version`, e.g. "NVIM v0.12.5"
+    ---@diagnostic disable-next-line: call-non-callable -- vim.version is a table with a __call metamethod
     local v = vim.version()
     local heading = ("  NVIM v%d.%d.%d"):format(v.major, v.minor, v.patch)
         .. (v.prerelease and ("-" .. v.prerelease) or "")

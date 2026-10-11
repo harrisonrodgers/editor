@@ -1,0 +1,7 @@
+# User-level rumdl config (markdown lint + format), used in projects without their own .rumdl.toml / rumdl.toml /
+# pyproject.toml [tool.rumdl]. Rules: `rumdl rule`, options: `rumdl config --defaults`.
+
+[global]
+line-length = 120
+# MD047: files should end with a single newline character
+disable = ["MD047"]

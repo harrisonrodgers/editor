@@ -1,0 +1,3 @@
+# readline config (bash, gdb, sqlite, ...), found via INPUTRC (set in ~/.config/zsh/.zshrc). Setting INPUTRC stops
+# readline from reading /etc/inputrc, so include it to keep the system's key bindings (Home/End, Ctrl+arrows, ...).
+$include /etc/inputrc

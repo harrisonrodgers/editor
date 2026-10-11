@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 NAME=${USER}-editor
-VERSION=`date +"%Y-%m-%d"`
+VERSION=$(date +"%Y-%m-%d")
 
 # Attach to the tmux session "0", creating it if it doesn't exist.
 # Uses exec rather than attach so bracketed paste works (no more :set paste).
@@ -27,8 +27,9 @@ docker run \
     --security-opt seccomp=unconfined \
     --security-opt apparmor=unconfined \
     --security-opt systempaths=unconfined \
-    -v $PWD:/host \
-    ${NAME}:${VERSION} \
+    -v "${PWD}":/host \
+    --workdir "/sandbox/${USER}/" \
+    "${NAME}:${VERSION}" \
     bash -lc '
         set -e
 
@@ -39,6 +40,6 @@ docker run \
         nix profile add nixpkgs#claude-code --refresh --impure
 
         exec sleep infinity
-    ' > /dev/null
+    ' >/dev/null
 
 attach

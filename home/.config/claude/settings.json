@@ -1,0 +1,40 @@
+{
+    "model": "opus",
+    "theme": "light",
+    "spinnerTipsEnabled": false,
+    "spinnerVerbs": {
+        "mode": "replace",
+        "verbs": [
+            "Processing"
+        ]
+    },
+    "awaySummaryEnabled": false,
+    "showTurnDuration": false,
+    "switchModelsOnFlag": false,
+    "externalEditorContext": true,
+    "attribution": {
+        "commit": "",
+        "pr": "",
+        "sessionUrl": false
+    },
+    "env": {
+        "DISABLE_ERROR_REPORTING": "1",
+        "DISABLE_TELEMETRY": "1"
+    },
+    "sandbox": {
+        "filesystem": {
+            "allowWrite": [
+                "//sandbox/harrison.rodgers/conda",
+                "//sandbox/harrison.rodgers/uv",
+                "//sandbox/harrison.rodgers/repos",
+                "~/.cache"
+            ],
+            "allowRead": [
+                "//sandbox/harrison.rodgers/conda",
+                "//sandbox/harrison.rodgers/uv",
+                "//sandbox/harrison.rodgers/repos",
+                "~/.cache"
+            ]
+        }
+    }
+}

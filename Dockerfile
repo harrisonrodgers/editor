@@ -61,9 +61,12 @@ USER ${UID}:${GID}
 WORKDIR ${HOME}
 
 ## INSTALL NIX #########################################################################################################
-RUN sudo mkdir -p /etc/nix && sudo sh -c 'printf "experimental-features = nix-command flakes" > /etc/nix/nix.conf'
+# use-xdg-base-directories: nix keeps the profile, channels and defexpr in ~/.local/state/nix instead of
+# ~/.nix-profile, ~/.nix-channels and ~/.nix-defexpr (nix.sh, sourced by .profile and .zshrc, finds the profile there)
+RUN sudo mkdir -p /etc/nix \
+    && printf "experimental-features = nix-command flakes\nuse-xdg-base-directories = true\n" | sudo tee /etc/nix/nix.conf >/dev/null
 
-ENV PATH="${HOME}/.nix-profile/bin:${PATH}" \
+ENV PATH="${HOME}/.local/state/nix/profile/bin:${PATH}" \
     NIXPKGS_ALLOW_UNFREE=1
 
 RUN mkdir -p "${HOME}/.config/nixpkgs" \
@@ -85,9 +88,10 @@ RUN nix profile add --impure \
 # editors
         # nano as a fallback; neovim is installed below, wrapped with nvim-treesitter
         nixpkgs#nano \
-        # compiler, used by nvim to build tree-sitter parsers
+        # C compiler
         nixpkgs#gcc \
-        # tree-sitter CLI, required by nvim-treesitter (:checkhealth) to build/install parsers
+        # tree-sitter CLI: generate / test / build a grammar by hand (nvim-treesitter's install dir is the read-only
+        # nix one, so :TSInstall can't add parsers; add them via nix instead)
         nixpkgs#tree-sitter \
 # cli utilities
         # core cli
@@ -100,16 +104,16 @@ RUN nix profile add --impure \
         nixpkgs#gnutar \
         nixpkgs#zip \
         nixpkgs#unzip \
-        # modern replacements: grep, find, cat, ls
+        # modern replacements: grep, find, cat, ls, sed (find & replace), curl (HTTP client)
         nixpkgs#ripgrep \
         # nixpkgs#ripgrep-all \
         nixpkgs#fd \
         nixpkgs#bat \
         nixpkgs#eza \
+        nixpkgs#sd \
+        nixpkgs#xh \
         # fuzzy finder
         nixpkgs#fzf \
-        # smarter cd that learns your most used directories
-        nixpkgs#zoxide \
         # per-directory env vars (.envrc)
         nixpkgs#direnv \
         # bulk rename files in your editor (qmv, imv)
@@ -125,11 +129,17 @@ RUN nix profile add --impure \
         # nixpkgs#man-pages \
         # nixpkgs#posix_man_pages \
 # data & documents
-        # structured data: query json, turn command output into json, make json greppable, query yaml
+        # structured data: query json (jq, and jaq: a faster jq clone), turn command output into json, make json
+        # greppable, query yaml
         nixpkgs#jq \
+        nixpkgs#jaq \
         nixpkgs#jc \
         nixpkgs#gron \
         nixpkgs#yq-go \
+        # json viewer (collapsible tree); csv toolkit (select, stats, join, ...) and viewer
+        nixpkgs#jless \
+        nixpkgs#qsv \
+        nixpkgs#csvlens \
         # convert hcl2 (nomad, terraform) to json so it's easier for claude to read
         nixpkgs#hcl2json \
         # simple statistics (mean, stddev, ...) from numbers on stdin
@@ -143,9 +153,10 @@ RUN nix profile add --impure \
         # diff viewers: pager for git output, and structural diff that understands syntax
         nixpkgs#delta \
         nixpkgs#difftastic \
+        # git merge driver that resolves conflicts using the syntax tree (set up in home/.config/git)
+        nixpkgs#mergiraf \
         # count lines of code
         nixpkgs#tokei \
-        nixpkgs#cloc \
 # language servers, linters & formatters
         # language servers (for neovim)
         nixpkgs#ty \
@@ -153,10 +164,19 @@ RUN nix profile add --impure \
         nixpkgs#yaml-language-server \
         nixpkgs#vim-language-server \
         nixpkgs#dockerfile-language-server \
-        nixpkgs#lua-language-server \
+        # lua (rust rewrite of the EmmyLua server)
+        nixpkgs#emmylua-ls \
         nixpkgs#jinja-lsp \
-        # html, css, json, eslint
+        # html, css, json (its eslint server is not used: biome lints js/ts)
         nixpkgs#vscode-langservers-extracted \
+        # json, css, js/ts, html, graphql: lint + format
+        nixpkgs#biome \
+        # toml: lint + format (with schemastore schemas, e.g. pyproject.toml)
+        nixpkgs#tombi \
+        # grammar and spelling in prose and comments (harper-ls)
+        nixpkgs#harper \
+        # file watcher backend for nvim's LSP client (:checkhealth vim.lsp: libuv's is slow on big trees)
+        nixpkgs#inotify-tools \
         # nixpkgs#nodePackages.neovim \
         # python: lint/format, and find unused functions/variables/...
         nixpkgs#ruff \
@@ -166,20 +186,21 @@ RUN nix profile add --impure \
         nixpkgs#shfmt \
         # lua: format
         nixpkgs#stylua \
-        # yaml, markdown, ansible
+        # yaml, markdown (lint + format, also a language server), ansible
         nixpkgs#yamllint \
-        nixpkgs#markdownlint-cli2 \
+        nixpkgs#rumdl \
         nixpkgs#ansible-lint \
         # jinja2 templates: djlint (lint + format, HTML templates), j2lint (lint), jinja2-cli (render a template)
         nixpkgs#djlint \
         nixpkgs#j2lint \
         nixpkgs#jinja2-cli \
         # sql: lint and auto-format
-        nixpkgs#sqlfluff \
+        nixpkgs#sqruff \
         # dockerfiles
         nixpkgs#hadolint \
-        # terraform .tf files
+        # terraform .tf files: lint, and a language server (completion, hover; formatting needs the terraform CLI)
         nixpkgs#tflint \
+        nixpkgs#terraform-ls \
         # .proto files: lint and check for breaking changes
         nixpkgs#buf \
         # xml: xmllint
@@ -191,8 +212,9 @@ RUN nix profile add --impure \
         nixpkgs#typos-lsp \
         # broken link checker (markdown, html, ...)
         nixpkgs#lychee \
-        # report on credential leaks: gitleaks git -v
+        # report on credential leaks: gitleaks git -v (thorough), ripsecrets (fast, for pre-commit)
         nixpkgs#gitleaks \
+        nixpkgs#ripsecrets \
 # debugging, profiling & monitoring
         # system inspection: processes, open files, network (netstat, ifconfig)
         nixpkgs#htop \
@@ -250,16 +272,16 @@ RUN nix profile add --impure --expr \
           wrapRc = false; \
         }'
 
-## REMOVE python if it snuck in (as we use micromamba) #################################################################
-#RUN sudo apt-get remove -y python3 \
-#    && sudo apt-get -y autoremove
-
-## MAN & COMPLETION (UPDATE DBS AFTER ALL THE ABOVE INSTALLS) ##########################################################
-RUN sudo mandb --create
-
 ## CONFIG FILES ########################################################################################################
 COPY --chown=${UID}:${GID} ["home", "${HOME}/"]
 COPY --chown=${UID}:${GID} ["sandbox/conda", "/sandbox/${USER}/conda"]
+RUN mkdir -p "/sandbox/${USER}/repos"
+
+## GNUPG ###############################################################################################################
+# gpg's home in XDG_DATA_HOME instead of ~/.gnupg (configs from home/.local/share/gnupg). gpg refuses to trust a home
+# dir others can read ("unsafe permissions"), and COPY keeps the build context's 755.
+ENV GNUPGHOME="${HOME}/.local/share/gnupg"
+RUN chmod 700 "${GNUPGHOME}"
 
 ## BAT THEME ###########################################################################################################
 # register the custom selenized-light theme from home/.config/bat/themes
@@ -314,9 +336,19 @@ RUN mkdir -p "${UV_PROJECT_ENVIRONMENT}" \
     && mkdir -p "${UV_TOOLS_DIR}"
 
 ## Claude  #############################################################################################################
+# CLAUDE_CONFIG_DIR: Claude Code keeps its config, .claude.json, sessions and memory there instead of ~/.claude and
+# ~/.claude.json. Its files come from home/.config/claude (copied with the rest of home/ above):
+#   .claude.json   skip onboarding
+#   settings.json  https://code.claude.com/docs/en/settings: opus; light theme; spinner without tips, one verb; no away
+#                  summary / turn duration; pause (don't switch models) when safeguards flag a message; Ctrl+G's
+#                  editor starts with the last response; no attribution in commits / PRs; no error reporting /
+#                  telemetry; the sandboxed shell may read / write /sandbox/${USER}/{conda,uv,repos} and ~/.cache
+#                  ("//" = absolute path; a single "/" would be relative to the settings file)
+#   CLAUDE.md      which tools are installed, python via uv, mergiraf
+ENV CLAUDE_CONFIG_DIR="${HOME}/.config/claude"
 
-RUN mkdir -p "${HOME}/.claude" \
-    && echo '{ "hasCompletedOnboarding": true }' > "${HOME}/.claude.json"
+## MAN & COMPLETION (UPDATE DBS AFTER ALL THE ABOVE INSTALLS) ##########################################################
+RUN sudo mandb --create
 
 ## CMD #################################################################################################################
 # tini as PID 1: `sleep` alone ignores SIGTERM (so stopping waits for the kill timeout) and never reaps orphaned processes

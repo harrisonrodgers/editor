@@ -47,6 +47,7 @@ local function diagnostics_picker(opts)
         end
         local default_entry_maker = require("telescope.make_entry").gen_from_diagnostics(opts)
         opts.entry_maker = function(item)
+            ---@diagnostic disable-next-line: param-type-mismatch -- lnum is a whole number, emmylua only knows `number`
             for _, d in ipairs(vim.diagnostic.get(item.bufnr, { lnum = item.lnum - 1 })) do
                 local message = vim.trim((d.message:gsub("\n", "")))
                 if d.col == item.col - 1 and d.code == item.code and message == item.text then

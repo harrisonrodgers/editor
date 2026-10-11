@@ -1,0 +1,6 @@
+# User-level tombi config (TOML lint + format + language server), used in projects without their own tombi.toml /
+# .tombi.toml / pyproject.toml [tool.tombi]. Read by the `tombi` CLI and by nvim's language server.
+# Options: https://tombi-toml.github.io/tombi/docs/configuration
+
+[format.rules]
+line-width = 120

@@ -22,7 +22,7 @@ require("hlchunk").setup({
         -- python docstring) get indent 0 from nvim-treesitter's indent rules, so no guides were drawn there.
         use_treesitter = false,
         chars = { "¦" },
-        style = { { fg = c.fg_2, bg = nil } }, -- TODO: try the default and see if that looks good (it's "whitespace" from theme)
+        style = { { fg = c.fg_1, bg = nil } }, -- TODO: try the default and see if that looks good (it's "whitespace" from theme)
     },
 
     line_num = {

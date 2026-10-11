@@ -49,6 +49,7 @@ local function border_docs_popup()
             and vim.bo[buf].buftype == "nofile"
             and vim.bo[buf].bufhidden == "wipe"
         then
+            ---@diagnostic disable-next-line: assign-type-mismatch -- 'pumborder' takes the same border names as a window
             vim.api.nvim_win_set_config(win, { border = vim.o.pumborder ~= "" and vim.o.pumborder or "rounded" })
         end
     end
@@ -137,9 +138,13 @@ vim.api.nvim_create_autocmd("LspAttach", {
         local bufnr = args.buf
 
         -- Format on save
-        -- (lua_ls is excluded: stylua formats lua via conform, see lint_format.lua. ruff formats python here, but its
-        -- auto-fixes run through conform's ruff_fix, because the editor-only lint rules below must not be auto-fixed on save;
-        -- conform's BufWritePre runs first.) -- TODO: why prefer stylua over lua_lsp?
+        -- (Servers whose filetype conform formats are excluded, see lint_format.lua: emmylua_ls (stylua formats lua),
+        -- rumdl (conform runs `rumdl fmt` on markdown) and bashls (conform runs shfmt, which bashls would run a second
+        -- time). ruff formats python here, but its auto-fixes run through conform's ruff_fix, because the editor-only
+        -- lint rules below must not be auto-fixed on save; conform's BufWritePre runs first.)
+        -- Where biome is attached it is the only server that formats, so it doesn't fight jsonls/cssls over the same
+        -- buffer. Except html: biome's html formatter is off by default, so there the html server formats.
+        -- terraformls formats by running the terraform CLI, so only when `terraform` is installed (it isn't, by default).
         -- Whether a server can format is checked when saving, not here: ruff registers formatting dynamically, after
         -- LspAttach, so supports_method() is still false at this point. (Re)creating the autocmd is harmless.
         vim.api.nvim_clear_autocmds({ group = augroup, buffer = bufnr })
@@ -147,8 +152,19 @@ vim.api.nvim_create_autocmd("LspAttach", {
             group = augroup,
             buffer = bufnr,
             callback = function()
+                local biome = #vim.lsp.get_clients({ bufnr = bufnr, name = "biome" }) > 0
+                    and vim.bo[bufnr].filetype ~= "html"
                 local function formats(c)
-                    return c.name ~= "lua_ls"
+                    if c.name == "emmylua_ls" or c.name == "rumdl" or c.name == "bashls" then
+                        return false
+                    end
+                    if c.name == "terraformls" and vim.fn.executable("terraform") == 0 then
+                        return false
+                    end
+                    if vim.bo[bufnr].filetype == "html" then
+                        return c.name ~= "biome"
+                    end
+                    return not biome or c.name == "biome"
                 end
                 if
                     #vim.tbl_filter(formats, vim.lsp.get_clients({ bufnr = bufnr, method = "textDocument/formatting" }))
@@ -264,9 +280,13 @@ vim.api.nvim_create_autocmd("LspAttach", {
     end,
 })
 
--- Ruff defaults to UTF-8 while many servers (and previously pyright) use UTF-16; make ruff use UTF-16 so they agree (avoids column drift on non-ASCII)
+-- Every server uses UTF-16 positions. nvim offers UTF-8 first, so the servers that support it (ruff, ty, biome, tombi)
+-- picked UTF-8 while the rest (harper_ls, typos_lsp, the typescript servers) only do UTF-16: a buffer with both gets its
+-- columns wrong after a non-ASCII character, and :checkhealth vim.lsp warns about the mix.
+vim.lsp.config("*", { capabilities = { general = { positionEncodings = { "utf-16" } } } })
+
+-- ruff: extra lint rules in the editor (see below)
 vim.lsp.config("ruff", {
-    capabilities = { general = { positionEncodings = { "utf-16" } } },
     init_options = {
         settings = {
             -- Extra rules only for the errors shown in nvim, on top of each repo's own ruff config. These never touch the
@@ -299,16 +319,189 @@ vim.lsp.config("ruff", {
     },
 })
 
+-- ty: let it watch the project's files, so a change made outside nvim (by Claude, git, a formatter) to a file that isn't
+-- open updates the errors in the files that are (e.g. a changed function signature). nvim only offers file watching on
+-- Linux when asked: it watches the whole project with inotifywait (inotify-tools, see the Dockerfile), so only ty has it.
+vim.lsp.config("ty", {
+    capabilities = { workspace = { didChangeWatchedFiles = { dynamicRegistration = true } } },
+})
+
 -- Personal word list for typos (home/.config/typos/typos.toml); a project's own .typos.toml is merged on top of it
 vim.lsp.config("typos_lsp", {
     init_options = { config = vim.fn.expand("~/.config/typos/typos.toml") },
 })
 
--- Give lua_ls the nvim runtime so it knows the vim.* API (completion, types) when editing the nvim config.
--- (runtime version and the `vim` global are set in home/.config/nvim/.luarc.jsonc)
-vim.lsp.config("lua_ls", {
-    settings = { Lua = { workspace = { library = { vim.env.VIMRUNTIME } } } },
+-- jsonls sets no `source` on its JSON Schema diagnostics (its syntax ones say "json"), so they show as "[?]". Fill it in,
+-- for both ways it sends them: pushed (publishDiagnostics) and pulled by nvim (textDocument/diagnostic).
+local function with_json_source(diagnostics)
+    for _, d in ipairs(diagnostics or {}) do
+        d.source = d.source or "json"
+    end
+end
+vim.lsp.config("jsonls", {
+    handlers = {
+        ["textDocument/publishDiagnostics"] = function(err, result, ctx)
+            with_json_source(result and result.diagnostics)
+            return vim.lsp.diagnostic.on_publish_diagnostics(err, result, ctx)
+        end,
+        ["textDocument/diagnostic"] = function(err, result, ctx)
+            with_json_source(result and result.items)
+            return vim.lsp.diagnostic.on_diagnostic(err, result, ctx)
+        end,
+    },
 })
+
+-- Give emmylua_ls the nvim runtime and the vim.pack plugins, so it knows the vim.* API and the plugins' modules
+-- (completion, types, `require`) when editing an nvim config: ~/.config/nvim, or any other dir named nvim with an
+-- init.lua (e.g. this repo's home/.config/nvim). Other lua projects don't get them, so their completion isn't full of
+-- nvim and plugin internals.
+-- (runtime version and the `vim` global are set in home/.config/nvim/.luarc.json, which also marks that folder as the
+-- project root. emmylua_ls reads .luarc.json and its own .emmyrc.json, but not .luarc.jsonc.)
+-- plenary is left out: its luassert types redefine the global `assert`, and this config never requires plenary itself.
+local function is_nvim_config(root)
+    return root ~= nil
+        and (
+            root == vim.fn.stdpath("config")
+            or (vim.fs.basename(root) == "nvim" and vim.uv.fs_stat(vim.fs.joinpath(root, "init.lua")) ~= nil)
+        )
+end
+local function nvim_lua_library()
+    local library = { vim.env.VIMRUNTIME }
+    for _, dir in ipairs(vim.fn.glob(vim.fn.stdpath("data") .. "/site/pack/core/opt/*", false, true)) do
+        if vim.fs.basename(dir) ~= "plenary.nvim" then
+            table.insert(library, dir)
+        end
+    end
+    -- nvim-treesitter is not a vim.pack plugin: it comes with the nix-wrapped neovim
+    for _, dir in ipairs(vim.api.nvim_get_runtime_file("lua/nvim-treesitter", false)) do
+        table.insert(library, vim.fs.dirname(vim.fs.dirname(dir)))
+    end
+    return library
+end
+vim.lsp.config("emmylua_ls", {
+    on_init = function(client)
+        if is_nvim_config(client.root_dir) then
+            client.settings = vim.tbl_deep_extend("force", client.settings or {}, {
+                emmylua = { workspace = { library = nvim_lua_library() } },
+            })
+            client:notify("workspace/didChangeConfiguration", { settings = client.settings })
+        end
+    end,
+})
+
+-- A project's own config file wins; without one, the user-level config in $XDG_CONFIG_HOME is used
+local config_home = vim.env.XDG_CONFIG_HOME or vim.fn.expand("~/.config")
+local function user_config(root_dir, project_files, user_file)
+    for _, name in ipairs(project_files) do
+        if root_dir and vim.uv.fs_stat(vim.fs.joinpath(root_dir, name)) then
+            return nil
+        end
+    end
+    local path = vim.fs.joinpath(config_home, user_file)
+    return vim.uv.fs_stat(path) and path or nil
+end
+
+-- biome: lint + format for json, css, js/ts, html, graphql, ... nvim-lspconfig only starts it in projects with a
+-- biome.json, so start it everywhere (root: the project, else the file's directory). Without a project biome.json the
+-- user-level ~/.config/biome/biome.json is used (line width 120, spaces).
+vim.lsp.config("biome", {
+    workspace_required = false,
+    root_dir = function(bufnr, on_dir)
+        local markers = { "biome.json", "biome.jsonc", "package.json", ".git" }
+        on_dir(vim.fs.root(bufnr, markers) or vim.fs.dirname(vim.api.nvim_buf_get_name(bufnr)))
+    end,
+    before_init = function(_, config)
+        local path = user_config(config.root_dir, { "biome.json", "biome.jsonc" }, "biome/biome.json")
+        config.settings = vim.tbl_deep_extend("force", config.settings or {}, {
+            biome = { configurationPath = path, requireConfiguration = false },
+        })
+    end,
+})
+
+-- sqruff: SQL lint + format (a Rust rewrite of sqlfluff, same rules). Its language server takes no settings (and ignores
+-- --config): it only reads a config file in its workspace root. So a project with its own sqruff config is the root;
+-- otherwise it's ~/.config/sqruff, which holds the user config (postgres, line length 120; sqruff's own defaults are
+-- ansi and 80). The `sqruff` function in .zshrc uses the same file on the command line.
+local function sqruff_project_root(bufnr)
+    local root = vim.fs.root(bufnr, { ".sqruff", ".sqruff.ini", "sqruff.toml", ".sqlfluff" })
+    if root then
+        return root
+    end
+    local dir = vim.fs.dirname(vim.api.nvim_buf_get_name(bufnr))
+    local pyproject = vim.fs.find("pyproject.toml", { path = dir, upward = true })[1]
+    if
+        pyproject
+        and vim.iter(io.lines(pyproject)):any(function(line)
+            return vim.startswith(line, "[tool.sqruff")
+        end)
+    then
+        return vim.fs.dirname(pyproject)
+    end
+end
+vim.lsp.config("sqruff", {
+    root_dir = function(bufnr, on_dir)
+        local user_dir = vim.fs.joinpath(config_home, "sqruff")
+        local root = sqruff_project_root(bufnr)
+        if not root and vim.uv.fs_stat(vim.fs.joinpath(user_dir, ".sqruff")) then
+            root = user_dir
+        end
+        -- no root at all (no user config either): sqruff runs with its defaults
+        on_dir(root or vim.fs.dirname(vim.api.nvim_buf_get_name(bufnr)))
+    end,
+})
+
+-- harper: grammar, in Australian English (its SpellCheck is off: typos_lsp checks spelling). In code it only checks
+-- comments, in prose the whole text. Personal words go in ~/.config/harper-ls/dictionary.txt (or its "add to dictionary"
+-- code action, `gra`).
+-- Filetypes: every language harper-ls supports (https://writewithharper.com/docs/integrations/language-server),
+-- by their nvim filetype names; get_language_id maps the ones whose LSP language id differs.
+local harper_language_ids = {
+    cs = "csharp",
+    sh = "shellscript",
+    bash = "shellscript",
+    zsh = "shellscript",
+    ps1 = "powershell",
+    text = "plaintext",
+    lhaskell = "literate haskell",
+}
+vim.lsp.config("harper_ls", {
+    -- stylua: ignore
+    filetypes = {
+        "asciidoc", "bash", "c", "clojure", "cmake", "cpp", "cs", "dart", "elixir", "gitcommit", "gleam", "go",
+        "groovy", "haskell", "html", "java", "javascript", "javascriptreact", "jjdescription", "kotlin",
+        "lhaskell", "lua", "mail", "markdown", "nix", "org", "php", "plaintex", "ps1", "python", "ruby", "rust", "scala",
+        "sh", "solidity", "swift", "tex", "text", "toml", "typescript", "typescriptreact", "typst", "zig", "zsh",
+    },
+    get_language_id = function(_, filetype)
+        return harper_language_ids[filetype] or filetype
+    end,
+    settings = {
+        ["harper-ls"] = {
+            dialect = "Australian",
+            userDictPath = vim.fs.joinpath(config_home, "harper-ls/dictionary.txt"),
+            -- spelling is left to typos_lsp: harper's SpellCheck flags every tool name, code and identifier
+            linters = { SpellCheck = false },
+        },
+    },
+})
+
+-- terraform-ls: completion, hover, syntax checks for .tf (tflint lints them, see lint_format.lua). It logs every request
+-- to stderr, which nvim keeps in lsp.log as errors, so its own log goes nowhere. No "single file" warning for a .tf
+-- outside a project. (Its formatting runs the terraform CLI, which isn't installed: see the format on save above.)
+vim.lsp.config("terraformls", {
+    cmd = { "terraform-ls", "serve", "-log-file=/dev/null" },
+    init_options = { ignoreSingleFileWarning = true },
+})
+
+-- html: it formats html (biome doesn't by default, see the format on save above). Its defaults differ from biome's and
+-- prettier's: <head> and <body> not indented inside <html>, and a blank line added around them. Match those instead.
+vim.lsp.config("html", {
+    settings = { html = { format = { indentInnerHtml = true, extraLiners = "" } } },
+})
+
+-- yamlls: only the plain yaml filetype. nvim-lspconfig also lists yaml.docker-compose, yaml.gitlab and yaml.helm-values,
+-- which nvim never sets (:checkhealth vim.lsp warns about them); the schemas for those files are picked by file name.
+vim.lsp.config("yamlls", { filetypes = { "yaml" } })
 
 -- jinja-lsp only attaches to the "jinja" filetype, which nvim doesn't detect from these extensions on its own
 vim.filetype.add({ extension = { jinja = "jinja", jinja2 = "jinja", j2 = "jinja" } })
@@ -320,12 +513,17 @@ vim.lsp.enable({
     "vimls",
     "bashls",
     "cssls",
-    "eslint",
     "dockerls",
     "html",
     "ty", -- type checker + inlay hints; ruff does lint/format/imports, they run side by side
     "ruff",
-    "lua_ls",
+    "emmylua_ls",
     "jinja_lsp",
     "typos_lsp",
+    "biome", -- json, css, js/ts, html, ...: lint + format (no eslint server: it needs the project's ESLint and node)
+    "rumdl", -- markdown lint; conform formats with `rumdl fmt`
+    "tombi", -- toml lint + format + schemas (finds ~/.config/tombi/config.toml itself)
+    "sqruff", -- sql lint + format
+    "terraformls", -- terraform: completion, hover, syntax errors (lint: tflint; formatting needs the terraform CLI)
+    "harper_ls", -- grammar + spelling in prose and comments
 })

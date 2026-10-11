@@ -11,6 +11,7 @@ do
     c.bg_1 = "#f2ecd6" -- theme default for light is #e9e4d0
     local new_bg_1 = tonumber(c.bg_1:sub(2), 16)
     for name, hl in pairs(vim.api.nvim_get_hl(0, {})) do
+        ---@diagnostic disable-next-line: undefined-field -- nvim_get_hl returns `link` for linked groups, untyped
         if not hl.link then
             local changed = false
             for _, key in ipairs({ "fg", "bg", "sp" }) do
@@ -20,23 +21,30 @@ do
                 end
             end
             if changed then
+                ---@diagnostic disable-next-line: param-type-mismatch -- nvim_get_hl's result is valid nvim_set_hl input
                 vim.api.nvim_set_hl(0, name, hl)
             end
         end
     end
 end
 
+-- Add attributes to a highlight group, keeping the rest of it (e.g. the theme's colors). nvim_set_hl alone replaces the
+-- whole group, so merge into the group's current definition.
+local function add_attributes(name, attributes)
+    local hl = vim.api.nvim_get_hl(0, { name = name, link = false })
+    ---@diagnostic disable-next-line: param-type-mismatch -- nvim_get_hl's result is valid nvim_set_hl input
+    vim.api.nvim_set_hl(0, name, vim.tbl_extend("force", hl, attributes))
+end
+
 -- Ensure comments are always italic
-vim.cmd([[highlight Comment gui=italic]])
+add_attributes("Comment", { italic = true })
 
--- TODO: figure out how to set just the italic field without resetting the rest of the settings (e.g. the theme's color)
---vim.api.nvim_set_hl(0, "Comment", { italic = true })
-
--- Bold the line number of the cursor line (`highlight` only changes gui, so the theme's colors are kept)
-vim.cmd([[highlight CursorLineNr gui=bold]])
+-- Bold the line number of the cursor line
+add_attributes("CursorLineNr", { bold = true })
 
 ---@diagnostic disable-next-line: undefined-field -- _G.selenized is set by the selenized.nvim theme at runtime
 local c = _G.selenized.colors -- the theme's palette (with bg_1 lightened above), used by the groups below
+local tint = require("config/tint")
 
 -- Border of floating windows (diagnostics, hover, ...): the theme's bg_1-colored border is almost invisible against the
 -- float background, so use the comment color, the same as the completion menu border (PmenuBorder)
@@ -47,12 +55,12 @@ vim.api.nvim_set_hl(0, "FloatBorder", { fg = c.dim_0, bg = c.bg_0 })
 vim.api.nvim_set_hl(0, "Pmenu", { fg = c.dim_0, bg = c.bg_0 })
 
 -- Visual-mode selection: using a yellow highlighter color.
-vim.api.nvim_set_hl(0, "Visual", { bg = require("config/tint")("#ffe066", c.bg_0, 0.7) })
+vim.api.nvim_set_hl(0, "Visual", { bg = tint("#ffe066", c.bg_0, 0.7) })
 
 -- Inlay hints: the theme leaves them unstyled (so they look like normal code). Make them a faint version of the comment
 -- color, blended toward the background; raise the 0.5 for more contrast, lower it to fade them further.
 -- (bg_0 itself would be invisible: it is the editor background.)
-vim.api.nvim_set_hl(0, "LspInlayHint", { fg = require("config/tint")(c.dim_0, c.bg_0, 0.5) })
+vim.api.nvim_set_hl(0, "LspInlayHint", { fg = tint(c.dim_0, c.bg_0, 0.5) })
 
 -- Completion menu: color of the "kind" column per LSP completion item kind (see completion_convert in lsp.lua)
 local kind_colors = {

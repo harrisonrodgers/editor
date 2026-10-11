@@ -62,11 +62,8 @@ do
     end
     vim.api.nvim_create_autocmd({ "ModeChanged", "CursorMoved" }, {
         callback = function(ev)
-            if
-                ev.event == "ModeChanged"
-                and not vim.v.event.new_mode:match("^V")
-                and not vim.v.event.old_mode:match("^V")
-            then
+            local event = vim.v.event --[[@as { new_mode: string, old_mode: string }]] -- set during ModeChanged
+            if ev.event == "ModeChanged" and not event.new_mode:match("^V") and not event.old_mode:match("^V") then
                 return
             end
             update()
@@ -134,20 +131,34 @@ vim.api.nvim_create_autocmd("FileType", {
 })
 
 -- Enable storing a backup before overwriting a file.
+-- nvim only creates the backup dir itself when 'backupdir' is left at its default, so create it here (without it, each
+-- write silently skips the backup).
 vim.opt.backup = true
-vim.opt.backupdir = { vim.env.HOME .. "/.local/state/nvim/backup//" }
+local backupdir = vim.fn.stdpath("state") .. "/backup"
+vim.fn.mkdir(backupdir, "p")
+vim.opt.backupdir = { backupdir .. "//" }
 
 -- Configure default splitting locations.
 vim.opt.splitbelow = true
 vim.opt.splitright = true
 
--- Bind clear search highlight to window redraw
-vim.keymap.set("n", "<C-l>", ":nohlsearch<CR><C-l>", { noremap = true })
+-- Clear the search highlight: nvim's default <C-l> already does this (and :diffupdate), so no mapping is needed.
 
--- Place mouse at last location
--- -- TODO: should be able to use mkview to save cursor position instead of this
--- -- TODO: disable this for git commit
-vim.cmd([[autocmd BufReadPost * if line("'\"") >= 1 && line("'\"") <= line("$") | exe "normal! g`\"" | endif]])
+-- Open a file at the cursor position it had when last closed (the '" mark). Not for git's commit message / rebase todo
+-- buffers: they are new text each time, so start at the top.
+vim.api.nvim_create_autocmd("BufReadPost", {
+    callback = function(ev)
+        -- 'filetype' isn't set yet: this autocmd runs before nvim's filetype detection (enabled after init.lua)
+        local filetype = vim.filetype.match({ buf = ev.buf }) or ""
+        if vim.tbl_contains({ "gitcommit", "gitrebase", "jjdescription" }, filetype) then
+            return
+        end
+        local mark = vim.api.nvim_buf_get_mark(ev.buf, '"')
+        if mark[1] >= 1 and mark[1] <= vim.api.nvim_buf_line_count(ev.buf) then
+            pcall(vim.api.nvim_win_set_cursor, 0, mark)
+        end
+    end,
+})
 
 -- Eager autoreload if file changed on disk (e.g. auto-formatter, auto-linter, LLM)
 vim.cmd([[autocmd FocusGained,BufEnter,CursorHold,CursorHoldI * if mode() != 'c' | checktime | endif]])
@@ -170,7 +181,8 @@ vim.api.nvim_create_autocmd("FileType", {
     end,
 })
 
--- Try to enable the "highlight the symbol under the cursor and it's usages" via LSP -- TODO: verify this is working
+-- Highlight the symbol under the cursor and its other uses in the buffer, via the LSP (textDocument/documentHighlight),
+-- after the cursor rests for 'updatetime' (checked: works, e.g. with emmylua_ls).
 vim.api.nvim_set_hl(0, "LspReferenceText", { bg = "#E5E4E2" })
 vim.api.nvim_set_hl(0, "LspReferenceRead", { bg = "#ebe5d1" })
 vim.api.nvim_set_hl(0, "LspReferenceWrite", { bg = "#E5E4E2" })
@@ -179,11 +191,15 @@ vim.api.nvim_create_autocmd("LspAttach", {
     callback = function(args)
         local client = vim.lsp.get_client_by_id(args.data.client_id)
         if client and client:supports_method("textDocument/documentHighlight") then
+            -- one group per buffer, cleared first: a second server (or a restarted one) doesn't add the autocmds again
+            local group = vim.api.nvim_create_augroup("LspDocumentHighlight" .. args.buf, { clear = true })
             vim.api.nvim_create_autocmd({ "CursorHold", "CursorHoldI" }, {
+                group = group,
                 buffer = args.buf,
                 callback = vim.lsp.buf.document_highlight,
             })
             vim.api.nvim_create_autocmd("CursorMoved", {
+                group = group,
                 buffer = args.buf,
                 callback = vim.lsp.buf.clear_references,
             })

@@ -1,0 +1,13 @@
+#!/bin/sh
+# There is no browser or desktop in this container, so instead of opening the URL / path, copy it to the host OS
+# clipboard: `tmux set-buffer -w` sends it to the outer terminal with OSC 52 (needs `set-clipboard on` in tmux.conf and
+# a terminal that supports OSC 52). Being named xdg-open, nvim's `gx` / vim.ui.open and other tools use it.
+if [ "$#" -ne 1 ]; then
+    echo "usage: xdg-open <url-or-path> (copies it to the host OS clipboard via tmux)" >&2
+    exit 1
+fi
+if [ -z "${TMUX}" ]; then
+    echo "xdg-open: not inside tmux, can't copy to the host OS clipboard: $1" >&2
+    exit 1
+fi
+tmux set-buffer -w -- "$1" && tmux display-message "Copied to OS clipboard: $1"

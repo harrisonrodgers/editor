@@ -3,6 +3,7 @@ return function(fg, bg, alpha)
     local out = "#"
     for i = 2, 6, 2 do
         local f, b = tonumber(fg:sub(i, i + 1), 16), tonumber(bg:sub(i, i + 1), 16)
+        assert(f and b, ("tint: colors must be #rrggbb, got %q and %q"):format(fg, bg))
         out = out .. string.format("%02x", math.floor(b + (f - b) * alpha + 0.5))
     end
     return out

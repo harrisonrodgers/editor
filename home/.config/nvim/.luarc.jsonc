@@ -1,7 +1,0 @@
-// Config for the Lua language server (lua_ls), NOT for nvim itself. It also marks this folder as the lua_ls project root.
-// The nvim runtime library for lua_ls is set in lua/config/lsp.lua (vim.lsp.config("lua_ls", ...)).
-{
-  "runtime": { "version": "LuaJIT" },
-  "diagnostics": { "globals": ["vim"] },
-  "workspace": { "checkThirdParty": false }
-}

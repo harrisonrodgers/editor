@@ -2,3 +2,5 @@
 **/.DS_Store
 # secrets passed at run time via `--env-file env`, so never needed in the build context
 env
+# vim.pack's lockfile from a live session: plugins.lua installs the latest version of each plugin on every build
+home/.config/nvim/nvim-pack-lock.json

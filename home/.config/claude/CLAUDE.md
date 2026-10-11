@@ -1,0 +1,3 @@
+These are installed if you need them: rg, fd, git, jq, jaq, yq, curl, xh, uv, sed, sd, gawk, tar, tree, file, make, gcc, ruff, ty, vulture, shellcheck, shfmt, hadolint, yamllint, ansible-lint, rumdl, biome, tombi, harper-cli, sqruff, tflint, hcl2json, stylua, buf, djlint, j2lint, xmllint, typos, gitleaks, ripsecrets, ast-grep, tokei, gron, jc, qsv, pandoc, difft, mergiraf, py-spy, strace, gdb, lsof, netstat, dig, hyperfine, grpcurl, websocat, promtool, lychee, micromamba, kubectl, kustomize, docker
+`python3` is not on PATH: use the active micromamba env's `python`, else `uv run python` (outside a uv project: `uv run --no-project python`).
+git merges use mergiraf (syntax-aware merge driver); `mergiraf solve <file>` resolves conflict markers left in a file.

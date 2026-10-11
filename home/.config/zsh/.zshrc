@@ -1,7 +1,7 @@
 ## FIRST ###############################################################################################################
 
 # Nix
-source ~/.nix-profile/etc/profile.d/nix.sh
+source ~/.local/state/nix/profile/etc/profile.d/nix.sh # nix keeps its profile in XDG_STATE_HOME (see the Dockerfile)
 
 ########################################################################################################################
 
@@ -27,6 +27,9 @@ export PYTHONPYCACHEPREFIX="${XDG_CACHE_HOME}/python"
 export LESSHISTFILE="${XDG_STATE_HOME}/less/history"
 export PYTHON_HISTORY="${XDG_STATE_HOME}/python/history"
 export SQLITE_HISTORY="${XDG_STATE_HOME}/sqlite/history"
+export RUMDL_CACHE_DIR="${XDG_CACHE_HOME}/rumdl" # else `rumdl fmt` (nvim's format on save) writes .rumdl_cache/ into the project
+export ANSIBLE_HOME="${XDG_DATA_HOME}/ansible"   # else ansible-lint creates ~/.ansible
+export WGETRC="${XDG_CONFIG_HOME}/wget/wgetrc"    # moves wget's HSTS cache (~/.wget-hsts) to ~/.local/state
 
 # Create the base dirs, plus the parent dirs of the history files above (less/python/sqlite will not create them)
 mkdir -p \
@@ -118,6 +121,23 @@ export LESS='-R --mouse --wheel-lines=5 --quit-if-one-screen'
 # Direnv (applies .envrc when cd'ing into a folder)
 eval "$(direnv hook zsh)"
 
+# sqruff (SQL lint + format) only reads a config file in the directory it runs in. When there is none (.sqruff,
+# .sqruff.ini, sqruff.toml, .sqlfluff, pyproject.toml [tool.sqruff]), use ~/.config/sqruff/.sqruff (postgres, line
+# length 120: the same one nvim uses) and say so on stderr. Left alone: --config given, `sqruff lsp` (its server
+# ignores --config), --help / --version.
+sqruff() {
+    local user_config="${XDG_CONFIG_HOME}/sqruff/.sqruff"
+    if [[ ! -f "$user_config" || " $* " == *" --config"* || "$1" == (lsp|-h|--help|-V|--version) ]] \
+        || [[ -f .sqruff || -f .sqruff.ini || -f sqruff.toml || -f .sqlfluff ]] \
+        || { [[ -f pyproject.toml ]] && grep -q '^\[tool\.sqruff' pyproject.toml; }
+    then
+        command sqruff "$@"
+    else
+        print -u2 "sqruff: no sqruff config in this directory, using --config ${user_config/#$HOME/~}"
+        command sqruff --config "$user_config" "$@"
+    fi
+}
+
 # Micromamba
 ,m() {
     micromamba "$@"
@@ -181,7 +201,7 @@ compdef _comma_r ,r
 # FZF
 source ~/.config/zsh/fzf/completion.zsh
 source ~/.config/zsh/fzf/key-bindings.zsh
-export FZF_DEFAULT_COMMAND="rg --files --hidden"
+export FZF_DEFAULT_COMMAND="rg --files --hidden --glob '!.git'" # hidden files, but not git's internals
 # --no-height
 export FZF_DEFAULT_OPTS="
   --height 90%
@@ -194,7 +214,7 @@ export FZF_CTRL_R_OPTS="--preview 'echo {}' --preview-window down:hidden:wrap --
 export FZF_CTRL_T_OPTS="--preview '((test -f {} && bat --color always {}) || tree -C {}) 2> /dev/null | head -200'"
 
 ## FZF-Tab Completion (load after compinit, before syntax highlighting)
-source ~/.nix-profile/share/fzf-tab/fzf-tab.plugin.zsh
+source "${XDG_STATE_HOME}/nix/profile/share/fzf-tab/fzf-tab.plugin.zsh"
 
 zstyle ':completion:*:descriptions' format '[%d]'
 # do not sort git checkout or commit
@@ -239,4 +259,4 @@ unset micromamba_hook
 ## LAST ################################################################################################################
 
 ## Syntax (highlighting of commands in the prompt, spot syntax errors before running) PLACE NEAR END OF .zshrc
-source ~/.nix-profile/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+source "${XDG_STATE_HOME}/nix/profile/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"

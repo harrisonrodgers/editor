@@ -1,0 +1,4 @@
+# Global git attributes (git reads $XDG_CONFIG_HOME/git/attributes by default)
+
+# mergiraf merge driver for every file, see [merge "mergiraf"] in ./config
+* merge=mergiraf
