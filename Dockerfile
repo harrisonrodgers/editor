@@ -191,6 +191,7 @@ RUN curl -fsSL https://nixos.org/nix/install | sh -s -- --no-daemon --no-channel
     # yaml, markdown (lint + format, also a language server), ansible
     nixpkgs#yamllint \
     nixpkgs#rumdl \
+    # NOTE: ansible-lint is 585MiB
     nixpkgs#ansible-lint \
     # jinja2 templates: djlint (lint + format, HTML templates), j2lint (lint), jinja2-cli (render a template)
     nixpkgs#djlint \
