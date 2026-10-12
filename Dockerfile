@@ -239,8 +239,7 @@ RUN nix profile add --impure \
     # nixpkgs#terraform \
     # nixpkgs#plantuml \
     # python
-    # env manager (envs live in $MAMBA_ROOT_PREFIX) and fast pip/venv replacement
-    nixpkgs#micromamba \
+    # fast pip/venv replacement (micromamba is installed separately below)
     nixpkgs#uv \
     # nixpkgs#python310Full \  # using micromamba envs instead
     # container runtime & claude code
@@ -265,6 +264,15 @@ RUN nix profile add --impure --expr \
     plugins = [ p.vimPlugins.nvim-treesitter.withAllGrammars ]; \
     wrapRc = false; \
     }'
+
+## MICROMAMBA (env manager, envs live in $MAMBA_ROOT_PREFIX)
+# nixpkgs#micromamba is a wrapper script that execs mamba-cpp's binary as `.mamba-wrapped`, and micromamba refuses to
+# `run`/`activate` unless its own filename is `micromamba` or `mamba`, so install that binary under the right name.
+# (The wrapper only set defaults for MAMBA_ROOT_PREFIX/CONDA_PKGS_DIRS/CONDA_ENVS_PATH, which are set below anyway.)
+RUN nix profile add --impure --expr \
+    'let p = (builtins.getFlake "nixpkgs").legacyPackages.${builtins.currentSystem}; \
+    in p.runCommand "micromamba-${p.mamba-cpp.version}" { } \
+    "mkdir -p $out/bin && cp ${p.mamba-cpp}/bin/.mamba-wrapped $out/bin/micromamba"'
 
 ## CONFIG FILES
 COPY --chown=${UID}:${GID} ["home", "${HOME}/"]

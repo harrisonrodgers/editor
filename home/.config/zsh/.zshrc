@@ -278,13 +278,12 @@ zstyle ':fzf-tab:*' fzf-flags -i
 zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza -1 --color=always $realpath'
 
 ## Micromamba
-# the nix package wraps the binary as ".mamba-wrapped", which the hook rejects (name must be micromamba),
-# so force the detected name or the micromamba shell function never gets defined
 # The hook output is static text, but generating it runs the binary (~15 ms), so cache it and source the file (~1 ms).
-# micromamba is pinned by the image so the cache is never invalidated; delete it to regenerate (e.g. after an upgrade).
+# micromamba is pinned by the image so the cache is never invalidated; delete it to regenerate (e.g. after an upgrade,
+# as the hook embeds the binary's nix store path).
 micromamba_hook="${XDG_CACHE_HOME}/zsh/micromamba-hook.zsh"
 if [[ ! -s "$micromamba_hook" ]]; then
-    micromamba shell hook --shell zsh | sed 's/^__exe_name=.*/__exe_name=micromamba/' >| "$micromamba_hook"
+    micromamba shell hook --shell zsh >| "$micromamba_hook"
 fi
 source "$micromamba_hook"
 unset micromamba_hook
