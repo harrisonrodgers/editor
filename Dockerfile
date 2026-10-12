@@ -36,7 +36,6 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /var/log/dpkg.log
 
-
 ## USER SETUP
 ENV USER=harrison.rodgers \
     GROUP=harrison.rodgers \
@@ -57,8 +56,12 @@ USER ${UID}:${GID}
 WORKDIR ${HOME}
 
 ## INSTALL NIX
+# auto-optimise-store: hard-link identical files as each path is added, in every layer. Better than a one-off
+# `nix store optimise`, which only covers paths present when it runs and links every file from earlier layers too
+# (overlayfs copies a lower-layer file up into the new layer when it is hard-linked, re-adding it to the image).
 RUN sudo mkdir -p /etc/nix \
-    && printf "experimental-features = nix-command flakes\nuse-xdg-base-directories = true\n" | sudo tee /etc/nix/nix.conf >/dev/null
+    && printf "experimental-features = nix-command flakes\nuse-xdg-base-directories = true\nauto-optimise-store = true\n" \
+    | sudo tee /etc/nix/nix.conf >/dev/null
 
 ENV PATH="${HOME}/.local/state/nix/profile/bin:${PATH}" \
     NIXPKGS_ALLOW_UNFREE=1
@@ -66,10 +69,9 @@ ENV PATH="${HOME}/.local/state/nix/profile/bin:${PATH}" \
 RUN mkdir -p "${HOME}/.config/nixpkgs" \
     && echo '{ allowUnfree = true; }' > "${HOME}/.config/nixpkgs/config.nix"
 
-RUN curl -fsSL https://nixos.org/nix/install | sh -s -- --no-daemon
-
 ## PACKAGES
-RUN nix profile add --impure \
+RUN curl -fsSL https://nixos.org/nix/install | sh -s -- --no-daemon \
+    && nix profile add --impure \
     # shell & terminal
     # shell & prompt
     nixpkgs#zsh \
@@ -251,9 +253,8 @@ RUN nix profile add --impure \
     # init process (PID 1, see ENTRYPOINT below): reaps zombie processes and forwards signals so `stop` is immediate
     nixpkgs#tini \
     # cleanup (only shrinks the image if chained onto the same RUN as the installs)
-    && nix store gc \
-    && nix store optimise \
-    && nix store verify --all --no-trust
+    && nix store gc
+# nix store optimise (skipped as we turned on auto-optimise-store = true instead)
 
 ## NEOVIM (wrapped with nvim-treesitter + all grammars/queries from nixpkgs)
 # `withAllGrammars` pulls in its parsers and queries only via a wrapped neovim, so install neovim that way.
@@ -263,7 +264,8 @@ RUN nix profile add --impure --expr \
     in p.wrapNeovimUnstable p.neovim-unwrapped { \
     plugins = [ p.vimPlugins.nvim-treesitter.withAllGrammars ]; \
     wrapRc = false; \
-    }'
+    }' \
+    && nix store gc
 
 ## MICROMAMBA (env manager, envs live in $MAMBA_ROOT_PREFIX)
 # nixpkgs#micromamba is a wrapper script that execs mamba-cpp's binary as `.mamba-wrapped`, and micromamba refuses to
@@ -272,7 +274,8 @@ RUN nix profile add --impure --expr \
 RUN nix profile add --impure --expr \
     'let p = (builtins.getFlake "nixpkgs").legacyPackages.${builtins.currentSystem}; \
     in p.runCommand "micromamba-${p.mamba-cpp.version}" { } \
-    "mkdir -p $out/bin && cp ${p.mamba-cpp}/bin/.mamba-wrapped $out/bin/micromamba"'
+    "mkdir -p $out/bin && cp ${p.mamba-cpp}/bin/.mamba-wrapped $out/bin/micromamba"' \
+    && nix store gc
 
 ## CONFIG FILES
 COPY --chown=${UID}:${GID} ["home", "${HOME}/"]
