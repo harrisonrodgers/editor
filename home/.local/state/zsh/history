@@ -1,9 +1,8 @@
 : 1670000000:0;nix shell --refresh nixpkgs#cowsay -c bash       # shell on demand, and specify command
 : 1670000000:0;nix shell --refresh nixpkgs#cowsay               # shell on demand, check upstream for new version
 : 1670000000:0;nix shell nixpkgs#cowsay                         # shell on demand
-: 1670000000:0;nix run nixpkgs/nixpkgs-25.11-darwin#cowsay 'hi' # run on demand
-: 1670000000:0;nix run nixpkgs/nixpkgs-unstable#cowsay 'hi'     # run on demand
-: 1670000000:0;nix run nixpkgs#cowsay 'hi' -c bash              # run on demand, and specify command
+: 1670000000:0;nix run nixpkgs/nixos-25.11#cowsay 'hi'          # run on demand, use specific channel
+: 1670000000:0;nix run nixpkgs/nixpkgs-unstable#cowsay 'hi'     # run on demand, use specific channel
 : 1670000000:0;nix run nixpkgs#cowsay 'hi'                      # run on demand
 : 1670000000:0;nix run --refresh nixpkgs#cowsay 'hi'            # run on demand, check upstream for new version
 : 1670000000:0;nix search nixpkgs ^                             # list all packages in flake
