@@ -59,8 +59,13 @@ WORKDIR ${HOME}
 # auto-optimise-store: hard-link identical files as each path is added, in every layer. Better than a one-off
 # `nix store optimise`, which only covers paths present when it runs and links every file from earlier layers too
 # (overlayfs copies a lower-layer file up into the new layer when it is hard-linked, re-adding it to the image).
+# nix-path: resolve `<nixpkgs>` (nix-shell -p, nix repl) via the flake registry, as no channel is installed (see below).
 RUN sudo mkdir -p /etc/nix \
-    && printf "experimental-features = nix-command flakes\nuse-xdg-base-directories = true\nauto-optimise-store = true\n" \
+    && printf "%s\n" \
+    "experimental-features = nix-command flakes" \
+    "use-xdg-base-directories = true" \
+    "auto-optimise-store = true" \
+    "nix-path = nixpkgs=flake:nixpkgs" \
     | sudo tee /etc/nix/nix.conf >/dev/null
 
 ENV PATH="${HOME}/.local/state/nix/profile/bin:${PATH}" \
@@ -69,8 +74,10 @@ ENV PATH="${HOME}/.local/state/nix/profile/bin:${PATH}" \
 RUN mkdir -p "${HOME}/.config/nixpkgs" \
     && echo '{ allowUnfree = true; }' > "${HOME}/.config/nixpkgs/config.nix"
 
-## PACKAGES
-RUN curl -fsSL https://nixos.org/nix/install | sh -s -- --no-daemon \
+## PACKAGES (nix, then nix packages, neovim and micromamba, all in one RUN so the store is deduped and cleaned as one layer)
+# --no-channel-add: the installer would otherwise subscribe to nixpkgs-unstable and download a full nixpkgs copy
+# (~210 MiB) that gc can never remove; everything here installs from the `nixpkgs` flake instead.
+RUN curl -fsSL https://nixos.org/nix/install | sh -s -- --no-daemon --no-channel-add \
     && nix profile add --impure \
     # shell & terminal
     # shell & prompt
@@ -231,7 +238,11 @@ RUN curl -fsSL https://nixos.org/nix/install | sh -s -- --no-daemon \
     nixpkgs#prometheus.cli \
     # containers & infrastructure
     # containers & kubernetes
-    nixpkgs#docker \
+    # CLI only (talks to a mounted host socket); the full nixpkgs#docker adds dockerd/containerd/moby (~330 MiB).
+    # docker-client already wraps the buildx and compose plugins (`docker compose`); docker-compose adds the standalone
+    # `docker-compose` command (same store path, so no extra size)
+    nixpkgs#docker-client \
+    nixpkgs#docker-compose \
     nixpkgs#kubectl \
     nixpkgs#kustomize \
     # explore docker image layers and find wasted space
@@ -252,30 +263,32 @@ RUN curl -fsSL https://nixos.org/nix/install | sh -s -- --no-daemon \
     nixpkgs#cachix \
     # init process (PID 1, see ENTRYPOINT below): reaps zombie processes and forwards signals so `stop` is immediate
     nixpkgs#tini \
-    # cleanup (only shrinks the image if chained onto the same RUN as the installs)
-    && nix store gc
-# nix store optimise (skipped as we turned on auto-optimise-store = true instead)
-
-## NEOVIM (wrapped with nvim-treesitter + all grammars/queries from nixpkgs)
-# `withAllGrammars` pulls in its parsers and queries only via a wrapped neovim, so install neovim that way.
-# wrapRc = false: keep loading ~/.config/nvim/init.lua instead of a generated init.
-RUN nix profile add --impure --expr \
+    #
+    # NEOVIM (wrapped with nvim-treesitter + all grammars/queries from nixpkgs)
+    # `withAllGrammars` pulls in its parsers and queries only via a wrapped neovim, so install neovim that way.
+    # wrapRc = false: keep loading ~/.config/nvim/init.lua instead of a generated init.
+    && nix profile add --impure --expr \
     'let p = (builtins.getFlake "nixpkgs").legacyPackages.${builtins.currentSystem}; \
     in p.wrapNeovimUnstable p.neovim-unwrapped { \
     plugins = [ p.vimPlugins.nvim-treesitter.withAllGrammars ]; \
     wrapRc = false; \
     }' \
-    && nix store gc
-
-## MICROMAMBA (env manager, envs live in $MAMBA_ROOT_PREFIX)
-# nixpkgs#micromamba is a wrapper script that execs mamba-cpp's binary as `.mamba-wrapped`, and micromamba refuses to
-# `run`/`activate` unless its own filename is `micromamba` or `mamba`, so install that binary under the right name.
-# (The wrapper only set defaults for MAMBA_ROOT_PREFIX/CONDA_PKGS_DIRS/CONDA_ENVS_PATH, which are set below anyway.)
-RUN nix profile add --impure --expr \
+    #
+    # MICROMAMBA (env manager, envs live in $MAMBA_ROOT_PREFIX)
+    # nixpkgs#micromamba is a wrapper script that execs mamba-cpp's binary as `.mamba-wrapped`, and micromamba refuses to
+    # `run`/`activate` unless its own filename is `micromamba` or `mamba`, so install that binary under the right name.
+    # (The wrapper only set defaults for MAMBA_ROOT_PREFIX/CONDA_PKGS_DIRS/CONDA_ENVS_PATH, which are set below anyway.)
+    && nix profile add --impure --expr \
     'let p = (builtins.getFlake "nixpkgs").legacyPackages.${builtins.currentSystem}; \
     in p.runCommand "micromamba-${p.mamba-cpp.version}" { } \
     "mkdir -p $out/bin && cp ${p.mamba-cpp}/bin/.mamba-wrapped $out/bin/micromamba"' \
-    && nix store gc
+    #
+    # CLEANUP (only shrinks the image if chained onto the same RUN as the installs)
+    # gc: drop build-only deps (e.g. vim/ruby for the custom neovim wrapper, which isn't in the binary cache).
+    # No `nix store optimise` needed, as auto-optimise-store dedups as paths are added.
+    # ~/.cache/nix: the downloaded nixpkgs source and eval cache (~80 MiB), only needed while evaluating.
+    && nix store gc \
+    && rm -rf "${HOME}/.cache/nix"
 
 ## CONFIG FILES
 COPY --chown=${UID}:${GID} ["home", "${HOME}/"]
