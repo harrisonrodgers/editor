@@ -27,8 +27,6 @@
 
 # --- Aliases ---
 [alias]
-    s = status
-    c = checkout
     # difftastic aliases: `git dlog -p` is `git log -p` with difftastic, likewise for the others
     ddiff = -c diff.external=difft diff
     dlog = -c diff.external=difft log --ext-diff

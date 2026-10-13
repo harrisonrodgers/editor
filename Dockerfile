@@ -192,7 +192,7 @@ RUN curl -fsSL https://nixos.org/nix/install | sh -s -- --no-daemon --no-channel
     nixpkgs#yamllint \
     nixpkgs#rumdl \
     # NOTE: ansible-lint is 585MiB
-    nixpkgs#ansible-lint \
+    #nixpkgs#ansible-lint \
     # jinja2 templates: djlint (lint + format, HTML templates), j2lint (lint), jinja2-cli (render a template)
     nixpkgs#djlint \
     nixpkgs#j2lint \
@@ -226,7 +226,7 @@ RUN curl -fsSL https://nixos.org/nix/install | sh -s -- --no-daemon --no-channel
     # log file viewer
     nixpkgs#lnav \
     # python sampling profiler, syscall tracer, debugger
-    nixpkgs#py-spy \
+    #nixpkgs#py-spy \ # takes 1000+ seconds to build, use binary build from elsewhere
     nixpkgs#strace \
     nixpkgs#gdb \
     # benchmark commands against each other
