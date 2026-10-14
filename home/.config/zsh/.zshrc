@@ -171,6 +171,7 @@ git() {
     elif [[ -d "$repos/$1" ]]
     then
         cd "$repos/$1"
+        ,ca &>/dev/null || true  # best-effort env activation, silently skipped if unsupported
     else
         echo "No such repo: $repos/$1" >&2
         return 1
@@ -191,16 +192,9 @@ compdef _comma_r ,r
 
 # Conda: Activate
 ,ca() {
-    if ! test -f tasks.py
-    then
-        echo "Not a supported repo, no tasks.py found."
-        return 1
-    else
-        local env_name="${PWD:t}"
-        micromamba deactivate
-        micromamba activate "$env_name"
-        rehash
-    fi
+    micromamba deactivate
+    micromamba activate "${PWD:t}"
+    rehash
 }
 
 # Conda: Recreate
