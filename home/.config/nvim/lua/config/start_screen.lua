@@ -1,7 +1,7 @@
 -- Custom start screen, shown when nvim is started without a file: a cheat sheet of the keys this setup uses, LSP first
 -- (keys, then the built-in :lsp commands), then diagnostics, git, telescope, the clipboard and saving. It is plain text,
--- so keep it in sync by hand when the keys change (lsp.lua, diagnostic.lua, gitsigns.lua, lint_format.lua; the telescope
--- in-picker keys are telescope's own defaults, the clipboard keys nvim's).
+-- so keep it in sync by hand when the keys change (lsp.lua, completion.lua, diagnostic.lua, gitsigns.lua, telescope.lua;
+-- the telescope in-picker keys are telescope's own defaults, the clipboard keys nvim's).
 
 -- Related keys share a row ("]h, [h" with "next / previous hunk"). The descriptions are at most 41 characters: two
 -- columns have to fit in 120 terminal columns.

@@ -118,36 +118,49 @@ echo 'CLAUDE_CODE_OAUTH_TOKEN=...' > env
 
 ## Nvim
 
-`neovim` from nixpkgs (0.12 features are used), config in `home/.config/nvim/` (`init.lua`, `lua/config/*.lua`). The
-keys are shown on the start screen.
+`neovim` from nixpkgs (0.12 features are used), config in `home/.config/nvim/`: `init.lua` loads the plugins and then
+`lua/config/*.lua` in order (options, autocmds, colorscheme, lint, conform, completion, lsp, ...); the folders below
+hold the rest. The keys are shown on the start screen.
+
+Runtime folders nvim reads by itself (those holding only a `.gitkeep` are placeholders, ready for the first file):
+
+| folder                          | for                                                                                  |
+|---------------------------------|--------------------------------------------------------------------------------------|
+| `after/lsp/<server>.lua`        | a language server's config (`return {...}`), applied over nvim-lspconfig's           |
+| `lua/config/lint/<linter>.lua`  | an nvim-lint linter defined or fixed here (loaded by `lua/config/lint/init.lua`)     |
+| `ftplugin/<filetype>.lua`       | settings for a filetype, before nvim's own ftplugin (which may override them)        |
+| `after/ftplugin/<filetype>.lua` | settings for a filetype, after nvim's own ftplugin (use this to change its defaults) |
+| `ftdetect/<name>.lua`           | filetype detection (`vim.filetype.add`)                                              |
+| `queries/<lang>/<query>.scm`    | treesitter queries replacing the bundled ones (highlights, folds, injections, ...)   |
+| `after/queries/<lang>/<q>.scm`  | treesitter queries extending the bundled ones (start with `;; extends`)              |
 
 ### Handmade
 
 Implemented in this configuration, in Lua.
 
-| handmade                     | for                                                   | where              |
-|------------------------------|-------------------------------------------------------|--------------------|
-| start screen                 | key cheat sheet when nvim starts without a file       | `start_screen.lua` |
-| completion item display      | kind colors, `[server] detail`, cut-short long items  | `lsp.lua`          |
-| completion docs popup border | same rounded border as the completion menu            | `lsp.lua`          |
-| completion keys              | `<Tab>`/`<S-Tab>` menu or snippet, `<CR>` if selected | `lsp.lua`          |
-| LSP lookups in telescope     | `gd`, `grr`, `gri`, `grt`, `gO`, `grs`, `grc`, `grC`  | `lsp.lua`          |
-| symbol highlight             | the symbol under the cursor and its uses              | `init.lua`         |
-| diagnostic format            | `[source] (code) message`, `E`/`W`/`I`/`H` prefix     | `diagnostic.lua`   |
-| diagnostics picker           | `<C-w>D` this buffer, `<space>Q` all open buffers     | `diagnostic.lua`   |
-| linewise visual highlight    | `V` highlights the selected lines to the window edge  | `init.lua`         |
-| quickfix height              | quickfix / location lists shrink to fit (max 10)      | `init.lua`         |
-| cursor restore               | reopening a file puts the cursor where it was (not in | `init.lua`         |
-|                              | git commit / rebase messages)                         |                    |
-| reload on change             | reload a buffer when its file changes on disk         | `init.lua`         |
-| linters                      | `xmllint`, `j2lint`, `tflint`; `gitlint` reads the    | `lint_format.lua`  |
-|                              | buffer (not the saved file) and the user config       |                    |
-| git gutter                   | blank colored signs, fainter once staged; hunk keys   | `gitsigns.lua`     |
-|                              | (`]h` `[h` `<space>h{p,s,r,d}`), `gb` blame           |                    |
-| sqruff user config           | used where a project has none: nvim roots the server  | `lsp.lua`,         |
-|                              | in `~/.config/sqruff`; zsh's `sqruff` adds `--config` | `.zshrc`           |
-| theme tweaks                 | cursor line, selection, inlay hint, border colors     | `colorscheme.lua`  |
-| `tint()`                     | blend two colors, for tinted highlights               | `tint.lua`         |
+| handmade                     | for                                                   | where                   |
+|------------------------------|-------------------------------------------------------|-------------------------|
+| start screen                 | key cheat sheet when nvim starts without a file       | `start_screen.lua`      |
+| completion item display      | kind colors, `[server] detail`, cut-short long items  | `completion.lua`        |
+| completion docs popup border | same rounded border as the completion menu            | `completion.lua`        |
+| completion keys              | `<Tab>`/`<S-Tab>` menu or snippet, `<CR>` if selected | `completion.lua`        |
+| LSP lookups in telescope     | `gd`, `grr`, `gri`, `grt`, `gO`, `grs`, `grc`, `grC`  | `lsp.lua`               |
+| symbol highlight             | the symbol under the cursor and its uses              | `lsp.lua`               |
+| diagnostic format            | `[source] (code) message`, `E`/`W`/`I`/`H` prefix     | `diagnostic.lua`        |
+| diagnostics picker           | `<C-w>D` this buffer, `<space>Q` all open buffers     | `diagnostic.lua`        |
+| linewise visual highlight    | `V` highlights the selected lines to the window edge  | `autocmds.lua`          |
+| quickfix height              | quickfix / location lists shrink to fit (max 10)      | `after/ftplugin/qf.lua` |
+| cursor restore               | reopening a file puts the cursor where it was (not in | `autocmds.lua`          |
+|                              | git commit / rebase messages)                         |                         |
+| reload on change             | reload a buffer when its file changes on disk         | `autocmds.lua`          |
+| linters                      | `xmllint`, `j2lint`, `tflint`; `gitlint` reads the    | `lint/*.lua`            |
+|                              | buffer (not the saved file) and the user config       |                         |
+| git gutter                   | blank colored signs, fainter once staged; hunk keys   | `gitsigns.lua`          |
+|                              | (`]h` `[h` `<space>h{p,s,r,d}`), `gb` blame           |                         |
+| sqruff user config           | used where a project has none: nvim roots the server  | `after/lsp/sqruff.lua`, |
+|                              | in `~/.config/sqruff`; zsh's `sqruff` adds `--config` | `.zshrc`                |
+| theme tweaks                 | cursor line, selection, inlay hint, border colors     | `colorscheme.lua`       |
+| `tint()`                     | blend two colors, for tinted highlights               | `tint.lua`              |
 
 ### Builtin
 
@@ -158,7 +171,7 @@ Part of Neovim, no plugin needed.
 | `vim.pack`                                | plugin manager (`plugins.lua`)                             |
 | `nvim.undotree` (`:Undotree`)             | visual undo tree (`packadd` in `init.lua`)                 |
 | `nvim.difftool` (`:DiffTool`)             | compare two files or directories (`packadd` in `init.lua`) |
-| `vim.lsp.config` / `vim.lsp.enable`       | language server setup (`lsp.lua`)                          |
+| `vim.lsp.config` / `vim.lsp.enable`       | language server setup (`lsp.lua`, `after/lsp/`)            |
 | `autocomplete` + `vim.lsp.completion`     | completion menu while typing                               |
 | `wildtrigger()` + `wildoptions=pum,fuzzy` | completion menu on the `:`, `/` and `?` command line       |
 | `vim.snippet`                             | jump between snippet fields with `<Tab>`                   |
@@ -205,8 +218,8 @@ The parser directory is in the (read-only) nix store, so `:TSInstall` can't add 
 
 ### LSP
 
-Configured in `lsp.lua`, installed by nix, server definitions from `nvim-lspconfig`. Every server reports diagnostics
-as soon as a file is opened, shown as `[source] (code) message`.
+Configured in `lsp.lua` (all servers) and `after/lsp/<server>.lua` (each one), installed by nix, server definitions
+from `nvim-lspconfig`. Every server reports diagnostics as soon as a file is opened, shown as `[source] (code) message`.
 
 - Format on save: servers that format do so on save, except where conform formats that filetype: `emmylua_ls`
   (stylua formats lua), `rumdl` (conform runs `rumdl fmt`) and `bashls` (conform runs shfmt). Where `biome` is attached
@@ -256,7 +269,7 @@ as soon as a file is opened, shown as `[source] (code) message`.
 
 ### Lint
 
-Run by `nvim-lint` (`lint_format.lua`), for tools without an LSP, when a file is opened, on leaving insert mode and
+Run by `nvim-lint` (`lua/config/lint/`), for tools without an LSP, when a file is opened, on leaving insert mode and
 after saving. `tflint` reads the saved file (no stdin), so it updates on save.
 
 | source                        | used for   | impl    |
@@ -271,7 +284,7 @@ after saving. `tflint` reads the saved file (no stdin), so it updates on save.
 
 ### Format
 
-Run by `conform.nvim` on save (`lint_format.lua`), before the language servers that format (see LSP).
+Run by `conform.nvim` on save (`conform.lua`), before the language servers that format (see LSP).
 
 | source                               | used for | impl   |
 |--------------------------------------|----------|--------|

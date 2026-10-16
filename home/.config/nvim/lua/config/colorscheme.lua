@@ -62,7 +62,12 @@ vim.api.nvim_set_hl(0, "Visual", { bg = tint("#ffe066", c.bg_0, 0.7) })
 -- (bg_0 itself would be invisible: it is the editor background.)
 vim.api.nvim_set_hl(0, "LspInlayHint", { fg = tint(c.dim_0, c.bg_0, 0.5) })
 
--- Completion menu: color of the "kind" column per LSP completion item kind (see completion_convert in lsp.lua)
+-- The symbol under the cursor and its other uses in the buffer (LSP document highlight, see lsp.lua)
+vim.api.nvim_set_hl(0, "LspReferenceText", { bg = "#E5E4E2" })
+vim.api.nvim_set_hl(0, "LspReferenceRead", { bg = "#ebe5d1" })
+vim.api.nvim_set_hl(0, "LspReferenceWrite", { bg = "#E5E4E2" })
+
+-- Completion menu: color of the "kind" column per LSP completion item kind (see completion_convert in completion.lua)
 local kind_colors = {
     Function = c.blue,
     Method = c.blue,
