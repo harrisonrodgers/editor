@@ -58,22 +58,20 @@ nixpkgs tool, is `~/.local/state/nix/profile`: `use-xdg-base-directories` in `/e
 
 Set in the `Dockerfile`:
 
-| variable                                                   | value / purpose                                    |
-|------------------------------------------------------------|----------------------------------------------------|
-| `TERM`, `COLORTERM`                                        | `xterm-256color`, `truecolor`                      |
-| `LANG`, `LC_ALL`                                           | `C.UTF-8`                                          |
-| `PATH`                                                     | adds `~/.local/state/nix/profile/bin` (nix) and    |
-|                                                            | uv's `tool_bin`                                    |
-| `NIXPKGS_ALLOW_UNFREE`                                     | `1`                                                |
-| `ZDOTDIR`                                                  | `~/.config/zsh` (zsh config location)              |
-| `GNUPGHOME`                                                | `~/.local/share/gnupg` (instead of `~/.gnupg`)     |
-| `CLAUDE_CONFIG_DIR`                                        | `~/.config/claude` (instead of `~/.claude` and     |
-|                                                            | `~/.claude.json`)                                  |
-| `PYTHONDONTWRITEBYTECODE`, `PYTEST_ADDOPTS`                | no `.pyc` files, no `.pytest_cache`                |
-| `MAMBA_ROOT_PREFIX`, `CONDA_ENVS_PATH`, `CONDA_PKGS_DIRS`  | `/sandbox/${USER}/conda`, its `envs/` and `pkgs/`  |
-| `UV_PROJECT_ENVIRONMENT`                                   | `/sandbox/${USER}/uv/venv`, shared by all projects |
-| `UV_PYTHON_INSTALL_DIR`, `UV_TOOLS_DIR`, `UV_TOOL_BIN_DIR` | under `/sandbox/${USER}/uv`                        |
-| `UV_NO_CACHE`, `UV_COMPILE_BYTECODE`, `UV_NO_DEV`          | `1`: no cache, compile on install, skip dev deps   |
+| variable                                                   | value / purpose                                                  |
+|------------------------------------------------------------|------------------------------------------------------------------|
+| `TERM`, `COLORTERM`                                        | `xterm-256color`, `truecolor`                                    |
+| `LANG`, `LC_ALL`                                           | `C.UTF-8`                                                        |
+| `PATH`                                                     | adds `~/.local/state/nix/profile/bin` (nix) and uv's `tool_bin`  |
+| `NIXPKGS_ALLOW_UNFREE`                                     | `1`                                                              |
+| `ZDOTDIR`                                                  | `~/.config/zsh` (zsh config location)                            |
+| `GNUPGHOME`                                                | `~/.local/share/gnupg` (instead of `~/.gnupg`)                   |
+| `CLAUDE_CONFIG_DIR`                                        | `~/.config/claude` (instead of `~/.claude` and `~/.claude.json`) |
+| `PYTHONDONTWRITEBYTECODE`, `PYTEST_ADDOPTS`                | no `.pyc` files, no `.pytest_cache`                              |
+| `MAMBA_ROOT_PREFIX`, `CONDA_ENVS_PATH`, `CONDA_PKGS_DIRS`  | `/sandbox/${USER}/conda`, its `envs/` and `pkgs/`                |
+| `UV_PROJECT_ENVIRONMENT`                                   | `/sandbox/${USER}/uv/venv`, shared by all projects               |
+| `UV_PYTHON_INSTALL_DIR`, `UV_TOOLS_DIR`, `UV_TOOL_BIN_DIR` | under `/sandbox/${USER}/uv`                                      |
+| `UV_NO_CACHE`, `UV_COMPILE_BYTECODE`, `UV_NO_DEV`          | `1`: no cache, compile on install, skip dev deps                 |
 
 From `env` at run time: `CLAUDE_CODE_OAUTH_TOKEN`. From `~/.config/zsh/.zshrc` (Claude Code's shell gets these too):
 `EDITOR`/`VISUAL` (`nvim`), the `XDG_*` dirs, with caches, histories and configs moved into them instead of `~` or the
@@ -138,54 +136,49 @@ Runtime folders nvim reads by itself (those holding only a `.gitkeep` are placeh
 
 Implemented in this configuration, in Lua.
 
-| handmade                     | for                                                   | where                   |
-|------------------------------|-------------------------------------------------------|-------------------------|
-| start screen                 | key cheat sheet when nvim starts without a file       | `start_screen.lua`      |
-| completion item display      | kind colors, `[server] detail`, cut-short long items  | `completion.lua`        |
-| completion docs popup border | same rounded border as the completion menu            | `completion.lua`        |
-| completion keys              | `<Tab>`/`<S-Tab>` menu or snippet, `<CR>` if selected | `completion.lua`        |
-| LSP lookups in telescope     | `gd`, `grr`, `gri`, `grt`, `gO`, `grs`, `grc`, `grC`  | `lsp.lua`               |
-| symbol highlight             | the symbol under the cursor and its uses              | `lsp.lua`               |
-| diagnostic format            | `[source] (code) message`, `E`/`W`/`I`/`H` prefix     | `diagnostic.lua`        |
-| diagnostics picker           | `<C-w>D` this buffer, `<space>Q` all open buffers     | `diagnostic.lua`        |
-| linewise visual highlight    | `V` highlights the selected lines to the window edge  | `autocmds.lua`          |
-| quickfix height              | quickfix / location lists shrink to fit (max 10)      | `after/ftplugin/qf.lua` |
-| cursor restore               | reopening a file puts the cursor where it was (not in | `autocmds.lua`          |
-|                              | git commit / rebase messages)                         |                         |
-| reload on change             | reload a buffer when its file changes on disk         | `autocmds.lua`          |
-| linters                      | `xmllint`, `j2lint`, `tflint`; `gitlint` reads the    | `lint/*.lua`            |
-|                              | buffer (not the saved file) and the user config       |                         |
-| git gutter                   | blank colored signs, fainter once staged; hunk keys   | `gitsigns.lua`          |
-|                              | (`]h` `[h` `<space>h{p,s,r,d}`), `gb` blame           |                         |
-| sqruff user config           | used where a project has none: nvim roots the server  | `after/lsp/sqruff.lua`, |
-|                              | in `~/.config/sqruff`; zsh's `sqruff` adds `--config` | `.zshrc`                |
-| theme tweaks                 | cursor line, selection, inlay hint, border colors     | `colorscheme.lua`       |
-| `tint()`                     | blend two colors, for tinted highlights               | `tint.lua`              |
+| handmade                     | for                                                                                                        | where                            |
+|------------------------------|------------------------------------------------------------------------------------------------------------|----------------------------------|
+| start screen                 | key cheat sheet when nvim starts without a file                                                            | `start_screen.lua`               |
+| completion item display      | kind colors, `[server] detail`, cut-short long items                                                       | `completion.lua`                 |
+| completion docs popup border | same rounded border as the completion menu                                                                 | `completion.lua`                 |
+| completion keys              | `<Tab>`/`<S-Tab>` menu or snippet, `<CR>` if selected                                                      | `completion.lua`                 |
+| LSP lookups in telescope     | `gd`, `grr`, `gri`, `grt`, `gO`, `grs`, `grc`, `grC`                                                       | `lsp.lua`                        |
+| symbol highlight             | the symbol under the cursor and its uses                                                                   | `lsp.lua`                        |
+| diagnostic format            | `[source] (code) message`, `E`/`W`/`I`/`H` prefix                                                          | `diagnostic.lua`                 |
+| diagnostics picker           | `<C-w>D` this buffer, `<space>Q` all open buffers                                                          | `diagnostic.lua`                 |
+| linewise visual highlight    | `V` highlights the selected lines to the window edge                                                       | `autocmds.lua`                   |
+| quickfix height              | quickfix / location lists shrink to fit (max 10)                                                           | `after/ftplugin/qf.lua`          |
+| cursor restore               | reopening a file puts the cursor where it was (not in git commit / rebase messages)                        | `autocmds.lua`                   |
+| reload on change             | reload a buffer when its file changes on disk                                                              | `autocmds.lua`                   |
+| linters                      | `xmllint`, `j2lint`, `tflint`; `gitlint` reads the buffer (not the saved file) and the user config         | `lint/*.lua`                     |
+| git gutter                   | blank colored signs, fainter once staged; hunk keys (`]h` `[h` `<space>h{p,s,r,d}`), `gb` blame            | `gitsigns.lua`                   |
+| sqruff user config           | used where a project has none: nvim roots the server in `~/.config/sqruff`; zsh's `sqruff` adds `--config` | `after/lsp/sqruff.lua`, `.zshrc` |
+| theme tweaks                 | cursor line, selection, inlay hint, border colors                                                          | `colorscheme.lua`                |
+| `tint()`                     | blend two colors, for tinted highlights                                                                    | `tint.lua`                       |
 
 ### Builtin
 
 Part of Neovim, no plugin needed.
 
-| builtin                                   | for                                                        |
-|-------------------------------------------|------------------------------------------------------------|
-| `vim.pack`                                | plugin manager (`plugins.lua`)                             |
-| `nvim.undotree` (`:Undotree`)             | visual undo tree (`packadd` in `init.lua`)                 |
-| `nvim.difftool` (`:DiffTool`)             | compare two files or directories (`packadd` in `init.lua`) |
-| `vim.lsp.config` / `vim.lsp.enable`       | language server setup (`lsp.lua`, `after/lsp/`)            |
-| `autocomplete` + `vim.lsp.completion`     | completion menu while typing                               |
-| `wildtrigger()` + `wildoptions=pum,fuzzy` | completion menu on the `:`, `/` and `?` command line       |
-| `vim.snippet`                             | jump between snippet fields with `<Tab>`                   |
-| `vim.lsp.inlay_hint`                      | inlay hints (types, parameter names)                       |
-| `vim.lsp.foldexpr`                        | folding from the language server                           |
-| `vim.lsp.linked_editing_range`            | editing an html tag also edits its closing tag             |
-| `vim.lsp.codelens`                        | code lens above lines                                      |
-| `vim.lsp.inline_completion`               | ghost-text completion, accepted with `<C-l>`               |
-| `vim.lsp.buf.document_highlight`          | highlight the symbol under the cursor and its uses         |
-| `vim.lsp.buf.typehierarchy`               | subtypes / supertypes (`grh` / `grH`)                      |
-| `vim.diagnostic`                          | diagnostics display (`diagnostic.lua`)                     |
-| `vim.treesitter`                          | syntax highlighting (parsers: see Treesitter)              |
-| `undofile`, `backup`                      | persistent undo history, backup before overwriting (both   |
-|                                           | in `~/.local/state/nvim`)                                  |
+| builtin                                   | for                                                                                |
+|-------------------------------------------|------------------------------------------------------------------------------------|
+| `vim.pack`                                | plugin manager (`plugins.lua`)                                                     |
+| `nvim.undotree` (`:Undotree`)             | visual undo tree (`packadd` in `init.lua`)                                         |
+| `nvim.difftool` (`:DiffTool`)             | compare two files or directories (`packadd` in `init.lua`)                         |
+| `vim.lsp.config` / `vim.lsp.enable`       | language server setup (`lsp.lua`, `after/lsp/`)                                    |
+| `autocomplete` + `vim.lsp.completion`     | completion menu while typing                                                       |
+| `wildtrigger()` + `wildoptions=pum,fuzzy` | completion menu on the `:`, `/` and `?` command line                               |
+| `vim.snippet`                             | jump between snippet fields with `<Tab>`                                           |
+| `vim.lsp.inlay_hint`                      | inlay hints (types, parameter names)                                               |
+| `vim.lsp.foldexpr`                        | folding from the language server                                                   |
+| `vim.lsp.linked_editing_range`            | editing an html tag also edits its closing tag                                     |
+| `vim.lsp.codelens`                        | code lens above lines                                                              |
+| `vim.lsp.inline_completion`               | ghost-text completion, accepted with `<C-l>`                                       |
+| `vim.lsp.buf.document_highlight`          | highlight the symbol under the cursor and its uses                                 |
+| `vim.lsp.buf.typehierarchy`               | subtypes / supertypes (`grh` / `grH`)                                              |
+| `vim.diagnostic`                          | diagnostics display (`diagnostic.lua`)                                             |
+| `vim.treesitter`                          | syntax highlighting (parsers: see Treesitter)                                      |
+| `undofile`, `backup`                      | persistent undo history, backup before overwriting (both in `~/.local/state/nvim`) |
 
 ### Plugins
 
@@ -301,21 +294,19 @@ User-level configurations in `$XDG_CONFIG_HOME` (`~/.config`, from `home/.config
 project's own configuration file replaces them. nvim uses all of them; "CLI" says whether the tool also finds it when
 run from the shell (e.g. by Claude), where "no" means it needs `--config <file>`.
 
-| file                       | for                                    | CLI | project configuration that replaces it        |
-|----------------------------|----------------------------------------|-----|-----------------------------------------------|
-| `stylua/stylua.toml`       | stylua (also 4 spaces)                 | (1) | `stylua.toml`, `.stylua.toml`                 |
-| `ruff/ruff.toml`           | ruff                                   | yes | `ruff.toml`, `pyproject.toml` `[tool.ruff]`   |
-| `rumdl/rumdl.toml`         | rumdl (also MD047 off: no required     | yes | `.rumdl.toml`, `rumdl.toml`, `pyproject.toml` |
-|                            | final newline)                         |     |                                               |
-| `biome/biome.json`         | biome (also 4 spaces)                  | no  | `biome.json`, `biome.jsonc`                   |
-| `tombi/config.toml`        | tombi                                  | yes | `tombi.toml`, `.tombi.toml`, `pyproject.toml` |
-| `sqruff/.sqruff`           | sqruff (also postgres)                 | (2) | `.sqruff`, `.sqruff.ini`, `sqruff.toml`,      |
-|                            |                                        |     | `.sqlfluff`, `pyproject.toml` (2)             |
-| `gitlint/gitlint`          | gitlint                                | no  | `.gitlint`                                    |
-| `yamllint/config`          | yamllint (no line length)              | yes | `.yamllint`                                   |
-| `typos/typos.toml`         | typos word list                        | no  | `.typos.toml` (merged on top)                 |
-| `harper-ls/dictionary.txt` | harper word list                       | -   | `.harper-dictionary.txt` (merged on top)      |
-| `nvim/.luarc.json`         | emmylua_ls, for the nvim config itself | -   | (it is that folder's project config)          |
+| file                       | for                                               | CLI | project configuration that replaces it                                     |
+|----------------------------|---------------------------------------------------|-----|----------------------------------------------------------------------------|
+| `stylua/stylua.toml`       | stylua (also 4 spaces)                            | (1) | `stylua.toml`, `.stylua.toml`                                              |
+| `ruff/ruff.toml`           | ruff                                              | yes | `ruff.toml`, `pyproject.toml` `[tool.ruff]`                                |
+| `rumdl/rumdl.toml`         | rumdl (also MD047 off: no required final newline) | yes | `.rumdl.toml`, `rumdl.toml`, `pyproject.toml`                              |
+| `biome/biome.json`         | biome (also 4 spaces)                             | no  | `biome.json`, `biome.jsonc`                                                |
+| `tombi/config.toml`        | tombi                                             | yes | `tombi.toml`, `.tombi.toml`, `pyproject.toml`                              |
+| `sqruff/.sqruff`           | sqruff (also postgres)                            | (2) | `.sqruff`, `.sqruff.ini`, `sqruff.toml`, `.sqlfluff`, `pyproject.toml` (2) |
+| `gitlint/gitlint`          | gitlint                                           | no  | `.gitlint`                                                                 |
+| `yamllint/config`          | yamllint (no line length)                         | yes | `.yamllint`                                                                |
+| `typos/typos.toml`         | typos word list                                   | no  | `.typos.toml` (merged on top)                                              |
+| `harper-ls/dictionary.txt` | harper word list                                  | -   | `.harper-dictionary.txt` (merged on top)                                   |
+| `nvim/.luarc.json`         | emmylua_ls, for the nvim config itself            | -   | (it is that folder's project config)                                       |
 
 (1) only with `stylua --search-parent-directories` (as conform runs it); a plain `stylua file.lua` uses tabs.
 
@@ -404,15 +395,13 @@ except the last table (apt). "impl" is the language each is written in.
 
 ### Code Search, Diffs & Merges
 
-| tool                  | for                                                                       | impl |
-|-----------------------|---------------------------------------------------------------------------|------|
-| `ast-grep` (`sg`)     | search and rewrite code by its syntax tree                                | rust |
-| `delta`               | git's pager: highlighted diffs with line numbers                          | rust |
-| `difftastic`          | structural diff: `difft`, `git ddiff`, `git dlog -p`, `git dshow`         | rust |
-| `mergiraf`            | git merge driver for every file (`~/.config/git/attributes`): resolves    | rust |
-|                       | conflicts that only look like conflicts line by line (e.g. both sides     |      |
-|                       | adding an import or a json key); unsupported files get git's own merge    |      |
-| `tokei`               | count lines of code                                                       | rust |
+| tool              | for                                                                                                                                                                                                                 | impl |
+|-------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------|
+| `ast-grep` (`sg`) | search and rewrite code by its syntax tree                                                                                                                                                                          | rust |
+| `delta`           | git's pager: highlighted diffs with line numbers                                                                                                                                                                    | rust |
+| `difftastic`      | structural diff: `difft`, `git ddiff`, `git dlog -p`, `git dshow`                                                                                                                                                   | rust |
+| `mergiraf`        | git merge driver for every file (`~/.config/git/attributes`): resolves conflicts that only look like conflicts line by line (e.g. both sides adding an import or a json key); unsupported files get git's own merge | rust |
+| `tokei`           | count lines of code                                                                                                                                                                                                 | rust |
 
 ### Language Servers, Linters & Formatters
 
